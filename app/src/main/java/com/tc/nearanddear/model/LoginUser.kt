@@ -9,7 +9,7 @@ data class LoginUser(
     val name: String,
     val email: String,
     val avatar_url: String,
-    val location_model: LocationModel,
+    val location_model: LocationModel?,
     val userID: String,
     val updated_at: String,
     val friendList: List<FriendModel>? = emptyList() // fix here
@@ -25,11 +25,11 @@ data class LocationModel(
 data class FriendModel(
     val userID: String,
     val userName: String,
-    val state: State
+    val friendState: FriendState
 )
 
 @Serializable
-enum class State {
+enum class FriendState {
     FRIEND,
     REQUEST,
     PENDING

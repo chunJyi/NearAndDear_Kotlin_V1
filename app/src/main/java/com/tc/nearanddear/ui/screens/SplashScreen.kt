@@ -17,6 +17,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tc.nearanddear.R
 import com.tc.nearanddear.common.DataStoreManager
+import com.tc.nearanddear.data.SupabaseClientProvider
+import com.tc.nearanddear.model.LoginUser
+import com.tc.nearanddear.session.UserSession
+import com.tc.nearanddear.ui.SupabaseClient
+import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 
 @Composable
@@ -25,6 +30,11 @@ fun SplashScreen(context: Context, onSplashFinished: (Boolean, Boolean) -> Unit)
         delay(2000) // Simulate splash delay
         val isUserLoggedIn = DataStoreManager.isUserLoggedIn(context)
         val isOnboardingDone = DataStoreManager.isOnboardingCompleted(context)
+
+        if (isUserLoggedIn) {
+            val userId = DataStoreManager.getUserID(context)
+            UserSession.loginUser = fetchUserById(userId)
+        }
         onSplashFinished(isUserLoggedIn, isOnboardingDone)
     }
 
@@ -69,5 +79,23 @@ fun SplashScreen(context: Context, onSplashFinished: (Boolean, Boolean) -> Unit)
             color = Color.Gray,
             modifier = Modifier.padding(bottom = 16.dp)
         )
+    }
+}
+
+suspend fun fetchUserById(userId: String): LoginUser? {
+    val client = SupabaseClientProvider.client
+
+    return try {
+        val client = client
+        val result = client
+            .from("loginUser")
+            .select {
+                filter { eq("userID", userId) }
+            }
+            .decodeList<LoginUser>()
+        result.firstOrNull()
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }

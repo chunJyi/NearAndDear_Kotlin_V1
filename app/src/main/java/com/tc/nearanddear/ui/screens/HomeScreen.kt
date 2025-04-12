@@ -15,73 +15,52 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tc.nearanddear.model.FriendModel
-import com.tc.nearanddear.model.LocationModel
-import com.tc.nearanddear.model.LoginUser
-import com.tc.nearanddear.model.State
+import com.tc.nearanddear.model.*
 import com.tc.nearanddear.session.UserSession
+import com.tc.nearanddear.session.UserSession.loginUser
 
 @Composable
 fun HomeScreen() {
-    var currentLoginUser = UserSession.loginUser;
+    val user = UserSession.loginUser ?: loginUser
     val selectedTab = remember { mutableStateOf(0) }
-    val tabItems = listOf("Friends", "Request", "Pending")
+    val tabs = listOf("Friends", "Request", "Pending")
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(14.dp)
     ) {
         Header()
-        Spacer(modifier = Modifier.height(16.dp))
-        UserProfile(currentLoginUser)
-        Spacer(modifier = Modifier.height(16.dp))
-        FriendsStoryRow()
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
+        Spacer(Modifier.height(16.dp))
+        Row(
             modifier = Modifier
-                .fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8ECEB)),
-            elevation = CardDefaults.cardElevation(4.dp)
+                .fillMaxWidth()
+                .height(180.dp)
+                .horizontalScroll(rememberScrollState())
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                FriendsTabs(tabItems, selectedTab.value) { selectedTab.value = it }
-                Spacer(modifier = Modifier.height(16.dp))
-                FriendListHeader(tabItems[selectedTab.value])
-                Spacer(modifier = Modifier.height(8.dp))
-                FriendList(
-                    when (selectedTab.value) {
-                        0 -> loginUser.friendList?.filter { it.state == State.FRIEND }
-                        1 -> loginUser.friendList?.filter { it.state == State.REQUEST }
-                        else -> loginUser.friendList?.filter { it.state == State.PENDING }
-                    }
-                )
-            }
+            UserProfileCard(user)
+            Spacer(modifier = Modifier.width(12.dp))
+            UserLocationMapCard(user)
         }
+//        UserProfile(user)
+        Spacer(Modifier.height(16.dp))
+        FriendsStoryRow()
+        Spacer(Modifier.height(16.dp))
+        FriendCard(tabs, selectedTab.value) { selectedTab.value = it }
     }
 }
 
 @Composable
-fun Header() {
+private fun Header() {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "Near & Dear",
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Normal,
-            fontFamily = FontFamily.Cursive
-        )
+        Text("Near & Dear", fontSize = 30.sp, fontFamily = FontFamily.Cursive)
         Button(
-            onClick = { },
+            onClick = {},
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Red,
                 contentColor = Color.White
@@ -94,7 +73,7 @@ fun Header() {
 }
 
 @Composable
-fun UserProfile(user: LoginUser?) {
+private fun UserProfile(user: LoginUser?) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -103,18 +82,22 @@ fun UserProfile(user: LoginUser?) {
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE8ECEB))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(user?.userID.toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text("50.slide.sif/345.343.2343", fontSize = 14.sp, color = Color.Gray)
+            Text(user?.name ?: "User", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "${user?.location_model?.latitude ?: "NA"} / ${user?.location_model?.longitude ?: "NA"}",
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
             Text("Yangon", fontSize = 14.sp, color = Color.Gray)
         }
     }
 }
 
 @Composable
-fun FriendsStoryRow() {
-    Text("Friends", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+private fun FriendsStoryRow() {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Text("Friends", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
         Row(
             modifier = Modifier
                 .horizontalScroll(rememberScrollState())
@@ -133,7 +116,7 @@ fun FriendsStoryRow() {
                     ) {
                         Image(
                             painter = painterResource(id = android.R.drawable.ic_menu_search),
-                            contentDescription = "Avatar",
+                            contentDescription = null,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -145,7 +128,35 @@ fun FriendsStoryRow() {
 }
 
 @Composable
-fun FriendsTabs(tabs: List<String>, selectedTab: Int, onTabSelected: (Int) -> Unit) {
+private fun FriendCard(tabs: List<String>, selectedIndex: Int, onTabSelected: (Int) -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8ECEB)),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            FriendsTabs(tabs, selectedIndex, onTabSelected)
+            Spacer(Modifier.height(16.dp))
+            FriendListHeader(tabs[selectedIndex])
+            Spacer(Modifier.height(8.dp))
+            FriendList(
+                when (selectedIndex) {
+                    0 -> loginUser?.friendList?.filter { it.friendState == FriendState.FRIEND }
+                    1 -> loginUser?.friendList?.filter { it.friendState == FriendState.REQUEST }
+                    else -> loginUser?.friendList?.filter { it.friendState == FriendState.PENDING }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun FriendsTabs(tabs: List<String>, selectedTab: Int, onTabSelected: (Int) -> Unit) {
     TabRow(
         selectedTabIndex = selectedTab,
         modifier = Modifier
@@ -158,9 +169,7 @@ fun FriendsTabs(tabs: List<String>, selectedTab: Int, onTabSelected: (Int) -> Un
                 selected = selectedTab == index,
                 onClick = { onTabSelected(index) },
                 modifier = Modifier
-                    .background(
-                        if (selectedTab == index) Color(0xFF2563EB) else Color.Transparent
-                    )
+                    .background(if (selectedTab == index) Color(0xFF2563EB) else Color.Transparent)
                     .clip(RoundedCornerShape(8.dp)),
                 text = {
                     Text(
@@ -175,7 +184,7 @@ fun FriendsTabs(tabs: List<String>, selectedTab: Int, onTabSelected: (Int) -> Un
 }
 
 @Composable
-fun FriendListHeader(title: String) {
+private fun FriendListHeader(title: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -183,7 +192,7 @@ fun FriendListHeader(title: String) {
     ) {
         Text("$title List", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Button(
-            onClick = { },
+            onClick = {},
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black,
                 contentColor = Color.White
@@ -196,7 +205,7 @@ fun FriendListHeader(title: String) {
 }
 
 @Composable
-fun FriendList(friends: List<FriendModel>?) {
+private fun FriendList(friends: List<FriendModel>?) {
     var expandedIndex by remember { mutableStateOf(-1) }
 
     Column(
@@ -215,24 +224,23 @@ fun FriendList(friends: List<FriendModel>?) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = when (item.state) {
-                            State.FRIEND -> Icons.Default.Favorite
-                            State.REQUEST -> Icons.Default.Star
-                            State.PENDING -> Icons.Default.Star
+                        imageVector = when (item.friendState) {
+                            FriendState.FRIEND -> Icons.Default.Favorite
+                            FriendState.REQUEST, FriendState.PENDING -> Icons.Default.Star
                             else -> Icons.Default.Person
                         },
                         contentDescription = null,
-                        tint = when (item.state) {
-                            State.FRIEND -> Color(0xFFF44336)
-                            State.REQUEST -> Color(0xFFFFA000)
-                            State.PENDING -> Color(0xFF2563EB)
+                        tint = when (item.friendState) {
+                            FriendState.FRIEND -> Color(0xFFF44336)
+                            FriendState.REQUEST -> Color(0xFFFFA000)
+                            FriendState.PENDING -> Color(0xFF2563EB)
                             else -> Color.Gray
                         },
                         modifier = Modifier.size(20.dp)
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("${item.userName}", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(item.userName, fontWeight = FontWeight.Bold)
                         Text("ID: ${item.userID}", fontSize = 12.sp, color = Color.Gray)
                     }
                     Icon(
@@ -241,9 +249,8 @@ fun FriendList(friends: List<FriendModel>?) {
                         tint = Color.Gray
                     )
                 }
-
                 if (isExpanded) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         "Extra actions or details here...",
                         fontSize = 13.sp,
@@ -255,36 +262,47 @@ fun FriendList(friends: List<FriendModel>?) {
     }
 }
 
-val friendDetailsList = listOf(
-    FriendModel("uid_friend1", "Alice", State.FRIEND),
-    FriendModel("uid_friend2", "Bob", State.FRIEND),
-    FriendModel("uid_friend3", "Charlie", State.FRIEND),
-    FriendModel("uid_friend4", "Diana", State.FRIEND),
-    FriendModel("uid_friend5", "Ethan", State.FRIEND),
-    FriendModel("uid_request1", "Fiona", State.REQUEST),
-    FriendModel("uid_request2", "George", State.REQUEST),
-    FriendModel("uid_request3", "Hannah", State.REQUEST),
-    FriendModel("uid_request4", "Ivan", State.REQUEST),
-    FriendModel("uid_pending1", "Jack", State.PENDING),
-    FriendModel("uid_pending2", "Kara", State.PENDING),
-    FriendModel("uid_pending3", "Leo", State.PENDING),
-    FriendModel("uid_pending4", "Maya", State.PENDING),
-    FriendModel("uid_pending5", "Nina", State.PENDING),
-    FriendModel("uid_pending6", "Oscar", State.PENDING),
-    FriendModel("uid_pending7", "Pia", State.PENDING),
-    FriendModel("uid_pending8", "Quinn", State.PENDING),
-    FriendModel("uid_pending9", "Ravi", State.PENDING),
-    FriendModel("uid_pending10", "Sasha", State.PENDING)
-)
+@Composable
+fun UserProfileCard(user: LoginUser?) {
+    Card(
+        modifier = Modifier
+            .width(300.dp)
+            .fillMaxHeight(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8ECEB))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = user?.name ?: "Unknown User",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            val lat = user?.location_model?.latitude ?: "NA"
+            val lon = user?.location_model?.longitude ?: "NA"
+            Text(text = "$lat / $lon", fontSize = 14.sp, color = Color.Gray)
+            Text(text = "Yangon", fontSize = 14.sp, color = Color.Gray)
+        }
+    }
+}
 
-var loginUser = LoginUser(
-    id = 1L,
-    created_at = "2025-04-12T10:00:00Z",
-    name = "Test User",
-    email = "testuser@example.com",
-    avatar_url = "https://example.com/avatar/testuser.jpg",
-    location_model = LocationModel(12.9716, 77.5946),
-    userID = "uid_testuser",
-    updated_at = "2025-04-12T12:00:00Z",
-    friendList = friendDetailsList
-)
+
+@Composable
+fun UserLocationMapCard(user: LoginUser?) {
+    Card(
+        modifier = Modifier
+            .width(300.dp)
+            .fillMaxHeight(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8ECEB))
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Replace this with a real MapView or Compose Map if you're using Google Maps Compose
+            Text(
+                text = "Map: ${user?.location_model?.latitude} / ${user?.location_model?.longitude}",
+                modifier = Modifier.align(Alignment.Center),
+                color = Color.DarkGray
+            )
+        }
+    }
+}
+

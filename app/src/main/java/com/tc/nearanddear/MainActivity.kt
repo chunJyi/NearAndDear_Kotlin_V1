@@ -22,69 +22,44 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val context = LocalContext.current
 
-//                // Start navigation after checking login and onboarding status
-//                LaunchedEffect(Unit) {
-//                    val userIsLoggedIn = DataStoreManager.isUserLoggedIn(context)
-//                    val onboardingCompleted = DataStoreManager.isOnboardingCompleted(context)
-//
-//                    // Navigate based on login and onboarding status
-//                    when {
-//                        !userIsLoggedIn -> navController.navigate("login") {
-//                            popUpTo("splash") {
-//                                inclusive = true
-//                            }
-//                        }
-//
-//                        !onboardingCompleted -> navController.navigate("onboarding") {
-//                            popUpTo("splash") {
-//                                inclusive = true
-//                            }
-//                        }
-//
-//                        else -> navController.navigate("home") {
-//                            popUpTo("splash") {
-//                                inclusive = true
-//                            }
-//                        }
-//                    }
-//                }
-
-                // NavHost for screen transitions
                 NavHost(navController = navController, startDestination = "splash") {
                     composable("splash") {
                         SplashScreen(context) { userIsLoggedIn, onboardingCompleted ->
-                            if (!onboardingCompleted) {
-                                navController.navigate("onboarding") {
-                                    popUpTo("splash") { inclusive = true }
+                            when {
+                                !onboardingCompleted -> {
+                                    navController.navigate("onboarding") {
+                                        popUpTo("splash") { inclusive = true }
+                                    }
                                 }
-                            } else if (!userIsLoggedIn) {
-                                navController.navigate("login") {
-                                    popUpTo("splash") { inclusive = true }
+                                !userIsLoggedIn -> {
+                                    navController.navigate("login") {
+                                        popUpTo("splash") { inclusive = true }
+                                    }
                                 }
-                            } else {
-                                navController.navigate("home") {
-                                    popUpTo("splash") { inclusive = true }
+                                else -> {
+                                    navController.navigate("home") {
+                                        popUpTo("splash") { inclusive = true }
+                                    }
                                 }
                             }
                         }
-
-                    }
-
-                    composable("login") {
-                        LoginScreen(onLoginClick = {
-                            // Once logged in, go to onboarding
-                            navController.navigate("onboarding") {
-                                popUpTo("login") { inclusive = true }
-                            }
-                        })
                     }
 
                     composable("onboarding") {
                         OnboardingScreen(onPermissionsGranted = {
-                            // After onboarding is done, go to home
+                            // Save onboarding state and move to login
                             DataStoreManager.setOnboardingCompleted(context)
-                            navController.navigate("home") {
+                            navController.navigate("login") {
                                 popUpTo("onboarding") { inclusive = true }
+                            }
+                        })
+                    }
+
+                    composable("login") {
+                        LoginScreen(onLoginClick = {
+                            // After login, go to home
+                            navController.navigate("home") {
+                                popUpTo("login") { inclusive = true }
                             }
                         })
                     }
@@ -102,4 +77,3 @@ class MainActivity : ComponentActivity() {
 fun AppTheme(content: @Composable () -> Unit) {
     content()
 }
-

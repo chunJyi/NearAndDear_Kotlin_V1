@@ -8,7 +8,6 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingExcept
 import androidx.credentials.*
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.tc.nearanddear.model.LoginUser
-import com.tc.nearanddear.model.LocationModel
 import com.tc.nearanddear.data.SupabaseClientProvider
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.IDToken
@@ -28,8 +27,7 @@ object AuthService {
         val credentialManager = CredentialManager.create(context)
 
         val rawNonce = UUID.randomUUID().toString()
-        val bytes = rawNonce.toByteArray()
-        val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
+        val digest = MessageDigest.getInstance("SHA-256").digest(rawNonce.toByteArray())
         val hashedNonce = digest.fold("") { str, it -> str + "%02x".format(it) }
 
         val googleOption = GetGoogleIdOption.Builder()
@@ -66,36 +64,34 @@ object AuthService {
             val user = session?.user ?: return@withContext null
 
             val userId = user.id
-            val name = user.userMetadata?.get("name") as? String ?: "No Name"
+            val name = user.userMetadata?.get("name") ?: "No Name"
             val email = user.email ?: "No Email"
-            val avatarUrl = user.userMetadata?.get("avatar_url") as? String ?: ""
+            val avatarUrl = user.userMetadata?.get("avatar_url")?: ""
             val updatedAt = Instant.now().toString()
 
-            val newUser = LoginUser(
-                userID = userId,
-                name = name,
-                email = email,
-                avatar_url = avatarUrl,
-                location_model = LocationModel(0.0, 0.0),
-                updated_at = updatedAt,
-                id = 34,
-                created_at = updatedAt,
-                friendList = emptyList() // fix here
-            )
-
-            val existingUsers = client.from("loginUser")
-                .select {
-                    filter { eq("userID", userId) }
-                }
-                .decodeList<LoginUser>()
-
-            if (existingUsers.isEmpty()) {
-                client.from("loginUser").insert(newUser)
+            val existingUsers = client.from("loginUser").select {
+                filter { eq("userID", userId) }
+            }.decodeList<LoginUser>()
+            val currentLocation = LocationService.getCurrentLocation(context)
+            val newUser: LoginUser = if (existingUsers.isEmpty()) {
+                val userToInsert = LoginUser(
+                    userID = userId,
+                    name = name.toString(),
+                    email = email,
+                    avatar_url = avatarUrl.toString(),
+                    location_model = currentLocation ,
+                    updated_at = updatedAt,
+                    id = 0,
+                    created_at = updatedAt,
+                    friendList = emptyList()
+                )
+                client.from("loginUser").insert(userToInsert);
                 Log.d(TAG, "User inserted successfully: $userId")
+                userToInsert
             } else {
                 Log.d(TAG, "User already exists: $userId")
+                existingUsers[0]
             }
-
             newUser
         } catch (e: GetCredentialCancellationException) {
             Log.w(TAG, "User cancelled the sign-in")
@@ -109,3 +105,4 @@ object AuthService {
         }
     }
 }
+
