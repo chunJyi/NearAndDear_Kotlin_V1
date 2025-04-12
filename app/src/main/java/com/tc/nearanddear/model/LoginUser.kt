@@ -11,7 +11,10 @@ data class LoginUser(
     val avatar_url: String,
     val location_model: LocationModel,
     val userID: String,
-    val updated_at: String
+    val updated_at: String,
+    val friendList: List<FriendModel> // Only stores userIDs
+
+
 )
 
 @Serializable
@@ -19,3 +22,20 @@ data class LocationModel(
     val latitude: Double,
     val longitude: Double
 )
+
+@Serializable
+data class FriendModel(
+    val userID: String,
+    val userName: String,
+    val state: State
+)
+
+@Serializable
+enum class State {
+    FRIEND,
+    REQUEST,
+    PENDING
+}
+
+// Friend Details
+

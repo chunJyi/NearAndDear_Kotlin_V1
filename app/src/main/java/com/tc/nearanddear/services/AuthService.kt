@@ -76,7 +76,10 @@ object AuthService {
                 email = email,
                 avatar_url = avatarUrl,
                 location_model = LocationModel(0.0, 0.0),
-                updated_at = updatedAt
+                updated_at = updatedAt,
+                id = 34,
+                created_at ="lskdfskdfk",
+                friendList = TODO()
             )
 
             val existingUsers = client.from("loginUser")
