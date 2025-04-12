@@ -2,8 +2,6 @@ package com.tc.nearanddear.ui.screens
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -11,7 +9,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -26,7 +23,7 @@ import com.tc.nearanddear.model.State
 @Composable
 fun HomeScreen() {
     val selectedTab = remember { mutableStateOf(0) }
-    val tabItems = listOf("Tab 5", "Tab 6", "Tab 7") // Updated to match the image
+    val tabItems = listOf("Tab 5", "Tab 6", "Tab 7")
 
     Column(
         modifier = Modifier
@@ -43,8 +40,7 @@ fun HomeScreen() {
 
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
+                .fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFFE8ECEB)),
             elevation = CardDefaults.cardElevation(4.dp)
@@ -58,16 +54,15 @@ fun HomeScreen() {
                 Spacer(modifier = Modifier.height(16.dp))
                 FriendListHeader(tabItems[selectedTab.value])
                 Spacer(modifier = Modifier.height(8.dp))
-                Box(modifier = Modifier.fillMaxSize()) {
+                FriendList(
                     when (selectedTab.value) {
-                        0 -> FriendList(loginUser.friendList.filter { it.state == State.FRIEND })
-                        1 -> FriendList(loginUser.friendList.filter { it.state == State.REQUEST })
-                        2 -> FriendList(loginUser.friendList.filter { it.state == State.PENDING })
+                        0 -> loginUser.friendList.filter { it.state == State.FRIEND }
+                        1 -> loginUser.friendList.filter { it.state == State.REQUEST }
+                        else -> loginUser.friendList.filter { it.state == State.PENDING }
                     }
-                }
+                )
             }
         }
-
     }
 }
 
@@ -85,7 +80,7 @@ fun Header() {
             fontFamily = FontFamily.Cursive
         )
         Button(
-            onClick = { /* Handle STOP */ },
+            onClick = { },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Red,
                 contentColor = Color.White
@@ -100,7 +95,7 @@ fun Header() {
 @Composable
 fun UserProfile() {
     Card(
-        modifier = Modifier.fillMaxWidth().height(200.dp),
+        modifier = Modifier.fillMaxWidth().height(150.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE8ECEB))
     ) {
@@ -114,14 +109,13 @@ fun UserProfile() {
 
 @Composable
 fun FriendsStoryRow() {
+    Text("Friends", fontSize = 18.sp, fontWeight = FontWeight.Bold)
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text("Friends", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier
                 .horizontalScroll(rememberScrollState())
                 .fillMaxWidth()
-                .padding(horizontal = 1.dp)
         ) {
             repeat(6) {
                 Column(
@@ -160,13 +154,9 @@ fun FriendsTabs(tabs: List<String>, selectedTab: Int, onTabSelected: (Int) -> Un
             Tab(
                 selected = selectedTab == index,
                 onClick = { onTabSelected(index) },
-                modifier = if (selectedTab == index) {
-                    Modifier
-                        .background(Color(0xFF2563EB))
-                        .clip(RoundedCornerShape(8.dp))
-                } else {
-                    Modifier
-                },
+                modifier = Modifier.background(
+                    if (selectedTab == index) Color(0xFF2563EB) else Color.Transparent
+                ).clip(RoundedCornerShape(8.dp)),
                 text = {
                     Text(
                         title,
@@ -188,7 +178,7 @@ fun FriendListHeader(title: String) {
     ) {
         Text("$title List", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Button(
-            onClick = { /* Add action */ },
+            onClick = { },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black,
                 contentColor = Color.White
@@ -204,14 +194,19 @@ fun FriendListHeader(title: String) {
 fun FriendList(friends: List<FriendModel>) {
     var expandedIndex by remember { mutableStateOf(-1) }
 
-    LazyColumn {
-        itemsIndexed(friends) { index, item ->
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 100.dp, max = 300.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        friends.forEachIndexed { index, item ->
             val isExpanded = expandedIndex == index
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expandedIndex = if (isExpanded) -1 else index }
-                    .padding(16.dp)
+                    .padding(12.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -223,20 +218,17 @@ fun FriendList(friends: List<FriendModel>) {
                         },
                         contentDescription = null,
                         tint = when (item.state) {
-                            State.FRIEND -> Color(0xFFF44336) // Red heart
-                            State.REQUEST -> Color(0xFFFFA000) // Yellow star
-                            State.PENDING -> Color(0xFF2563EB) // Blue circle
+                            State.FRIEND -> Color(0xFFF44336)
+                            State.REQUEST -> Color(0xFFFFA000)
+                            State.PENDING -> Color(0xFF2563EB)
                             else -> Color.Gray
                         },
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Accordion Title ${index + 1}",
-                            fontWeight = FontWeight.Bold
-                        ) // Matches image
-                        Text(item.userName, fontSize = 12.sp, color = Color.Gray)
+                        Text("${item.userName}", fontWeight = FontWeight.Bold)
+                        Text("ID: ${item.userID}", fontSize = 12.sp, color = Color.Gray)
                     }
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ArrowDropDown else Icons.Default.Add,
@@ -259,20 +251,15 @@ fun FriendList(friends: List<FriendModel>) {
 }
 
 val friendDetailsList = listOf(
-    // FRIENDS (5)
     FriendModel("uid_friend1", "Alice", State.FRIEND),
     FriendModel("uid_friend2", "Bob", State.FRIEND),
     FriendModel("uid_friend3", "Charlie", State.FRIEND),
     FriendModel("uid_friend4", "Diana", State.FRIEND),
     FriendModel("uid_friend5", "Ethan", State.FRIEND),
-
-    // REQUESTS (4)
     FriendModel("uid_request1", "Fiona", State.REQUEST),
     FriendModel("uid_request2", "George", State.REQUEST),
     FriendModel("uid_request3", "Hannah", State.REQUEST),
     FriendModel("uid_request4", "Ivan", State.REQUEST),
-
-    // PENDING (10)
     FriendModel("uid_pending1", "Jack", State.PENDING),
     FriendModel("uid_pending2", "Kara", State.PENDING),
     FriendModel("uid_pending3", "Leo", State.PENDING),
