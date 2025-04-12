@@ -65,13 +65,19 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:realtime-kt")
 
     implementation("io.ktor:ktor-client-android:3.0.0-rc-1")
+    implementation ("androidx.credentials:credentials:1.5.0")
     implementation("com.google.android.gms:play-services-auth:21.0.0")
     implementation ("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
-
     implementation("androidx.navigation:navigation-compose:2.8.9")
-    implementation ("androidx.credentials:credentials:1.5.0")
 
+    // Accompanist for pager and permissions
+    implementation ("com.google.accompanist:accompanist-pager:0.31.3-beta")
+    implementation ("com.google.accompanist:accompanist-permissions:0.31.3-beta")
+
+    implementation ("androidx.datastore:datastore-preferences:1.1.4")
+
+    implementation ("com.google.android.gms:play-services-location:21.0.1")
 
 }

@@ -1,5 +1,7 @@
 package com.tc.nearanddear.ui.screens
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -31,6 +33,9 @@ import androidx.compose.ui.unit.sp
 import com.tc.nearanddear.R
 import com.tc.nearanddear.services.AuthService
 import kotlinx.coroutines.launch
+import androidx.core.content.edit
+import com.tc.nearanddear.common.DataStoreManager
+import com.tc.nearanddear.session.UserSession
 
 private const val TAG = "LoginScreen"
 
@@ -54,6 +59,9 @@ fun LoginScreen(onLoginClick: () -> Unit) {
                     try {
                         val user = AuthService.signInWithGoogle(context)
                         if (user != null) {
+                            UserSession.loginUser = user
+                            DataStoreManager.setUserLoggedIn(context, true)
+//                            saveLoginStatus(context, true)
                             Toast.makeText(context, "You're signed in!", Toast.LENGTH_SHORT).show()
                             onLoginClick()
                         } else {
@@ -168,4 +176,12 @@ private fun TermsText() {
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
     )
+}
+
+fun saveLoginStatus(context: Context, isLoggedIn: Boolean) {
+    val sharedPreferences: SharedPreferences =
+        context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+    sharedPreferences.edit() {
+        putBoolean("is_user_logged_in", isLoggedIn)
+    }  // Apply changes asynchronously
 }

@@ -19,12 +19,13 @@ import com.tc.nearanddear.model.FriendModel
 import com.tc.nearanddear.model.LocationModel
 import com.tc.nearanddear.model.LoginUser
 import com.tc.nearanddear.model.State
+import com.tc.nearanddear.session.UserSession
 
 @Composable
 fun HomeScreen() {
+    var currentLoginUser = UserSession.loginUser;
     val selectedTab = remember { mutableStateOf(0) }
-    val tabItems = listOf("Tab 5", "Tab 6", "Tab 7")
-
+    val tabItems = listOf("Friends", "Request", "Pending")
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -33,7 +34,7 @@ fun HomeScreen() {
     ) {
         Header()
         Spacer(modifier = Modifier.height(16.dp))
-        UserProfile()
+        UserProfile(currentLoginUser)
         Spacer(modifier = Modifier.height(16.dp))
         FriendsStoryRow()
         Spacer(modifier = Modifier.height(16.dp))
@@ -56,9 +57,9 @@ fun HomeScreen() {
                 Spacer(modifier = Modifier.height(8.dp))
                 FriendList(
                     when (selectedTab.value) {
-                        0 -> loginUser.friendList.filter { it.state == State.FRIEND }
-                        1 -> loginUser.friendList.filter { it.state == State.REQUEST }
-                        else -> loginUser.friendList.filter { it.state == State.PENDING }
+                        0 -> loginUser.friendList?.filter { it.state == State.FRIEND }
+                        1 -> loginUser.friendList?.filter { it.state == State.REQUEST }
+                        else -> loginUser.friendList?.filter { it.state == State.PENDING }
                     }
                 )
             }
@@ -93,15 +94,17 @@ fun Header() {
 }
 
 @Composable
-fun UserProfile() {
+fun UserProfile(user: LoginUser?) {
     Card(
-        modifier = Modifier.fillMaxWidth().height(150.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(150.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE8ECEB))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("ChunJyi", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text("50.sldf.sif/345.343.2343", fontSize = 14.sp, color = Color.Gray)
+            Text(user?.userID.toString(), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("50.slide.sif/345.343.2343", fontSize = 14.sp, color = Color.Gray)
             Text("Yangon", fontSize = 14.sp, color = Color.Gray)
         }
     }
@@ -154,9 +157,11 @@ fun FriendsTabs(tabs: List<String>, selectedTab: Int, onTabSelected: (Int) -> Un
             Tab(
                 selected = selectedTab == index,
                 onClick = { onTabSelected(index) },
-                modifier = Modifier.background(
-                    if (selectedTab == index) Color(0xFF2563EB) else Color.Transparent
-                ).clip(RoundedCornerShape(8.dp)),
+                modifier = Modifier
+                    .background(
+                        if (selectedTab == index) Color(0xFF2563EB) else Color.Transparent
+                    )
+                    .clip(RoundedCornerShape(8.dp)),
                 text = {
                     Text(
                         title,
@@ -191,7 +196,7 @@ fun FriendListHeader(title: String) {
 }
 
 @Composable
-fun FriendList(friends: List<FriendModel>) {
+fun FriendList(friends: List<FriendModel>?) {
     var expandedIndex by remember { mutableStateOf(-1) }
 
     Column(
@@ -200,7 +205,7 @@ fun FriendList(friends: List<FriendModel>) {
             .heightIn(min = 100.dp, max = 300.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        friends.forEachIndexed { index, item ->
+        friends?.forEachIndexed { index, item ->
             val isExpanded = expandedIndex == index
             Column(
                 modifier = Modifier
@@ -272,7 +277,7 @@ val friendDetailsList = listOf(
     FriendModel("uid_pending10", "Sasha", State.PENDING)
 )
 
-val loginUser = LoginUser(
+var loginUser = LoginUser(
     id = 1L,
     created_at = "2025-04-12T10:00:00Z",
     name = "Test User",

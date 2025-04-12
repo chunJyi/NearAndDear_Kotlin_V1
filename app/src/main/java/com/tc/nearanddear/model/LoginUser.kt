@@ -12,9 +12,7 @@ data class LoginUser(
     val location_model: LocationModel,
     val userID: String,
     val updated_at: String,
-    val friendList: List<FriendModel> // Only stores userIDs
-
-
+    val friendList: List<FriendModel>? = emptyList() // fix here
 )
 
 @Serializable
@@ -36,6 +34,4 @@ enum class State {
     REQUEST,
     PENDING
 }
-
-// Friend Details
 

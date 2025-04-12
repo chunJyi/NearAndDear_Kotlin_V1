@@ -17,6 +17,7 @@ import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import java.time.Instant
 import java.util.*
 
 private const val TAG = "AuthService"
@@ -68,7 +69,7 @@ object AuthService {
             val name = user.userMetadata?.get("name") as? String ?: "No Name"
             val email = user.email ?: "No Email"
             val avatarUrl = user.userMetadata?.get("avatar_url") as? String ?: ""
-            val updatedAt = System.currentTimeMillis().toString()
+            val updatedAt = Instant.now().toString()
 
             val newUser = LoginUser(
                 userID = userId,
@@ -78,8 +79,8 @@ object AuthService {
                 location_model = LocationModel(0.0, 0.0),
                 updated_at = updatedAt,
                 id = 34,
-                created_at ="lskdfskdfk",
-                friendList = TODO()
+                created_at = updatedAt,
+                friendList = emptyList() // fix here
             )
 
             val existingUsers = client.from("loginUser")
