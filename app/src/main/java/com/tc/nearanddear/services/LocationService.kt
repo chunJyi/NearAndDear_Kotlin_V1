@@ -5,6 +5,7 @@ import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.TrafficStats
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
@@ -18,6 +19,8 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okio.utf8Size
+import java.time.Instant
 import java.util.Locale.filter
 
 class LocationService : Service() {
@@ -32,11 +35,6 @@ class LocationService : Service() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         createNotificationChannel()
-        var locationRequest = LocationRequest.create();
-        locationRequest.setInterval(10000); // 10 seconds
-        locationRequest.setFastestInterval(5000); // 5 seconds
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setSmallestDisplacement(10.0f); // 10 meters
 
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
@@ -45,14 +43,34 @@ class LocationService : Service() {
                     val lat = location.latitude
                     val lng = location.longitude
                     Log.d("LocationService", "Lat: $lat, Lng: $lng")
-                    UserSession.loginUser?.location_model = LocationModel(lat, lng)
+                    UserSession.loginUser = UserSession.loginUser?.copy(
+                        location_model = LocationModel(lat, lng)
+                    )
                     CoroutineScope(Dispatchers.IO).launch {
-                        pushLocationToSupabase(lat, lng)
+                        checkBandwidth{
+                            pushLocationToSupabase(lat,lng)
+                        }
                     }
                     updateNotification(lat, lng)
                 }
             }
         }
+    }
+
+    // Bandwidth checker: accepts a suspend lambda
+    suspend fun checkBandwidth(block: suspend () -> Unit) {
+        val txBefore = TrafficStats.getUidTxBytes(android.os.Process.myUid())
+        val rxBefore = TrafficStats.getUidRxBytes(android.os.Process.myUid())
+
+        block() // perform the actual network call
+
+        val txAfter = TrafficStats.getUidTxBytes(android.os.Process.myUid())
+        val rxAfter = TrafficStats.getUidRxBytes(android.os.Process.myUid())
+
+        val sent = txAfter - txBefore
+        val received = rxAfter - rxBefore
+
+        Log.d("Bandwidth", "Sent: $sent bytes, Received: $received bytes")
     }
 
     suspend fun pushLocationToSupabase(lat: Double, lng: Double) {
@@ -73,7 +91,8 @@ class LocationService : Service() {
                         eq("userID", userId)
                     }
                 }
-            println(response.data)
+            Log.d("update data", "Sent: ${updateData.toString().toByteArray().size} bytes")
+            println(response.data.utf8Size())
         } catch (e: Exception) {
             println("Error updating location: ${e.message}")
         }
@@ -88,8 +107,8 @@ class LocationService : Service() {
     }
 
     private fun startLocationUpdates() {
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 50000L)
-            .setMinUpdateDistanceMeters(10f) // Only update if moved 10 meters
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000L)
+//            .setMinUpdateDistanceMeters(10f) // Only update if moved 10 meters
             .build()
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED

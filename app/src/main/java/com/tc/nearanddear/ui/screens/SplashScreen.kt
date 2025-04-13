@@ -20,7 +20,6 @@ import com.tc.nearanddear.common.DataStoreManager
 import com.tc.nearanddear.data.SupabaseClientProvider
 import com.tc.nearanddear.model.LoginUser
 import com.tc.nearanddear.session.UserSession
-import com.tc.nearanddear.ui.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 

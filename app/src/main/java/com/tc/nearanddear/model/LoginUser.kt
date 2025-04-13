@@ -1,5 +1,7 @@
 package com.tc.nearanddear.model
 
+import androidx.navigation.Navigator
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -11,6 +13,7 @@ data class LoginUser(
     val avatar_url: String,
     var location_model: LocationModel?,
     val userID: String,
+    @SerialName("updated_at")
     val updated_at: String,
     val friendList: List<FriendModel>? = emptyList() // fix here
 
