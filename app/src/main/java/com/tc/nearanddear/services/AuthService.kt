@@ -72,7 +72,7 @@ object AuthService {
             val existingUsers = client.from("loginUser").select {
                 filter { eq("userID", userId) }
             }.decodeList<LoginUser>()
-            val currentLocation = LocationService.getCurrentLocation(context)
+            val currentLocation = LocationUtils.getCurrentLocation(context)
             val newUser: LoginUser = if (existingUsers.isEmpty()) {
                 val userToInsert = LoginUser(
                     userID = userId,

@@ -9,10 +9,13 @@ data class LoginUser(
     val name: String,
     val email: String,
     val avatar_url: String,
-    val location_model: LocationModel?,
+    var location_model: LocationModel?,
     val userID: String,
     val updated_at: String,
     val friendList: List<FriendModel>? = emptyList() // fix here
+
+
+
 )
 
 @Serializable
@@ -24,7 +27,7 @@ data class LocationModel(
 @Serializable
 data class FriendModel(
     val userID: String,
-    val userName: String,
+    val name: String,
     val friendState: FriendState
 )
 

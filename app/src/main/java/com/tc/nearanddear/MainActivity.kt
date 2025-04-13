@@ -1,5 +1,7 @@
 package com.tc.nearanddear
 
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.tc.nearanddear.common.DataStoreManager
 import com.tc.nearanddear.data.SupabaseClientProvider
+import com.tc.nearanddear.services.LocationService
 import com.tc.nearanddear.ui.screens.*
 
 class MainActivity : ComponentActivity() {
@@ -66,9 +69,19 @@ class MainActivity : ComponentActivity() {
 
                     composable("home") {
                         HomeScreen()
+                        startLocationService()
                     }
                 }
             }
+        }
+    }
+
+    private fun startLocationService() {
+        val serviceIntent = Intent(this, LocationService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
         }
     }
 }
@@ -77,3 +90,5 @@ class MainActivity : ComponentActivity() {
 fun AppTheme(content: @Composable () -> Unit) {
     content()
 }
+
+
