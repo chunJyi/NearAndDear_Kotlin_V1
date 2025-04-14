@@ -1,5 +1,7 @@
 package com.tc.nearanddear.ui.screens
 
+import android.annotation.SuppressLint
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -15,11 +17,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import coil.compose.rememberImagePainter
 import com.google.android.gms.maps.model.CameraPosition
@@ -31,12 +37,11 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.tc.nearanddear.model.*
 import com.tc.nearanddear.session.UserSession
 import com.tc.nearanddear.session.UserSession.loginUser
-import java.util.stream.Collectors
 import com.tc.nearanddear.R
-
+import com.tc.nearanddear.session.SharedViewModel
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(navController: NavController) {
     val user = UserSession.loginUser ?: loginUser
     val selectedTab = remember { mutableStateOf(0) }
     val tabs = listOf("Friends", "Request", "Pending")
@@ -65,7 +70,7 @@ fun HomeScreen() {
         Spacer(Modifier.height(16.dp))
 
         Spacer(Modifier.height(16.dp))
-        FriendCard(tabs, selectedTab.value) { selectedTab.value = it }
+        FriendCard(navController, tabs, selectedTab.value) { selectedTab.value = it }
     }
 }
 
@@ -206,7 +211,12 @@ private fun FriendsStoryRow(friendList: List<FriendModel>?) {
 
 
 @Composable
-private fun FriendCard(tabs: List<String>, selectedIndex: Int, onTabSelected: (Int) -> Unit) {
+private fun FriendCard(
+    navController: NavController,
+    tabs: List<String>,
+    selectedIndex: Int,
+    onTabSelected: (Int) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -222,9 +232,15 @@ private fun FriendCard(tabs: List<String>, selectedIndex: Int, onTabSelected: (I
             Spacer(Modifier.height(8.dp))
             FriendListHeader(tabs[selectedIndex])
             Spacer(Modifier.height(8.dp))
-            when(selectedIndex){
-                0 -> FriendList(loginUser?.friendList?.filter { it.friendState == FriendState.FRIEND })
-                1 -> FriendList(loginUser?.friendList?.filter { it.friendState == FriendState.REQUEST })
+            when (selectedIndex) {
+                0 -> FriendList(
+                    navController,
+                    loginUser?.friendList?.filter { it.friendState == FriendState.FRIEND })
+
+                1 -> FriendList(
+                    navController,
+                    loginUser?.friendList?.filter { it.friendState == FriendState.REQUEST })
+
                 else -> PendingList(loginUser?.friendList?.filter { it.friendState == FriendState.PENDING })
 
             }
@@ -267,7 +283,7 @@ private fun FriendsTabs(tabs: List<String>, selectedTab: Int, onTabSelected: (In
                         else Color(0xFFE0E0E0) // Unselected tab color
                     )
                     .clip(RoundedCornerShape(8.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .padding(horizontal = 4.dp, vertical = 4.dp)
                     .height(36.dp),
                 text = {
                     Text(
@@ -306,7 +322,7 @@ private fun FriendListHeader(title: String) {
 
 @Composable
 private fun RequestList(friends: List<FriendModel>?) {
-    var expandedIndex by remember { mutableStateOf(-1) }
+    var expandedIndex by remember { mutableIntStateOf(-1) }
 
     Column(
         modifier = Modifier
@@ -364,7 +380,7 @@ private fun RequestList(friends: List<FriendModel>?) {
 
 @Composable
 private fun PendingList(friends: List<FriendModel>?) {
-    var expandedIndex by remember { mutableStateOf(-1) }
+    var expandedIndex by remember { mutableIntStateOf(-1) }
 
     Column(
         modifier = Modifier
@@ -396,15 +412,20 @@ private fun PendingList(friends: List<FriendModel>?) {
                         Text(item.name, fontWeight = FontWeight.Bold)
                         Text("ID: ${item.userID}", fontSize = 12.sp, color = Color.Gray)
                     }
-                    // Go button
                     Button(
-                        onClick = { /* Navigate or action for Go button */ },
+                        onClick = { /* Your action */ },
                         modifier = Modifier.size(30.dp),
                         contentPadding = PaddingValues(0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
                     ) {
-                        Text("Go", fontSize = 12.sp, color = Color.White)
+                        Icon(
+                            painter = rememberAsyncImagePainter(item.name),
+                            contentDescription = "Go",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
+
                 }
                 // Show extra details when expanded
                 if (isExpanded) {
@@ -421,9 +442,10 @@ private fun PendingList(friends: List<FriendModel>?) {
 }
 
 
+@SuppressLint("ContextCastToActivity")
 @Composable
-private fun FriendList(friends: List<FriendModel>?) {
-    var expandedIndex by remember { mutableStateOf(-1) }
+private fun FriendList(navController: NavController, friends: List<FriendModel>?) {
+    var selectedFriend by remember { mutableStateOf<FriendModel?>(null) }
 
     Column(
         modifier = Modifier
@@ -431,12 +453,11 @@ private fun FriendList(friends: List<FriendModel>?) {
             .heightIn(min = 100.dp, max = 300.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        friends?.forEachIndexed { index, item ->
-            val isExpanded = expandedIndex == index
+        friends?.forEach { item ->
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { expandedIndex = if (isExpanded) -1 else index }
+                    .clickable { selectedFriend = item }
                     .padding(12.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -461,22 +482,103 @@ private fun FriendList(friends: List<FriendModel>?) {
                         Text("ID: ${item.userID}", fontSize = 12.sp, color = Color.Gray)
                     }
                     Icon(
-                        imageVector = if (isExpanded) Icons.Default.ArrowDropDown else Icons.Default.Add,
-                        contentDescription = null,
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Details",
                         tint = Color.Gray
-                    )
-                }
-                if (isExpanded) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Extra actions or details here...",
-                        fontSize = 13.sp,
-                        color = Color.DarkGray
                     )
                 }
             }
         }
     }
+
+    selectedFriend?.let { friend ->
+        val sharedViewModel: SharedViewModel = viewModel(LocalContext.current as ComponentActivity)
+
+        AlertDialog(
+            onDismissRequest = { selectedFriend = null },
+            confirmButton = {}, // All UI inside text block
+            text = {
+                Box(modifier = Modifier.fillMaxWidth()) {
+
+                    // Top-right Close Icon
+                    IconButton(
+                        onClick = { selectedFriend = null },
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close"
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Profile Avatar
+                        AsyncImage(
+                            model = "https://ui-avatars.com/api/?background=random",
+                            contentDescription = "Friend Avatar",
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(CircleShape)
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Friend Info
+                        Text(friend.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("ID: ${friend.name}", fontSize = 14.sp, color = Color.Gray)
+                        Text(
+                            "Status: ${friend.friendState.name}",
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+
+                        Spacer(Modifier.height(20.dp))
+
+                        // Action Buttons (Message + Map)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            // Message Icon
+                            IconButton(onClick = {
+                                // TODO: Handle message action here
+                                selectedFriend = null
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Email,
+                                    contentDescription = "Message"
+                                )
+                            }
+
+                            // Map Icon
+                            IconButton(onClick = {
+                                // Navigate to map page with friend
+                                sharedViewModel.setFriend(friend.userID)
+                                navController.navigate("map")
+//                                navigateToMap(friend)
+                                selectedFriend = null
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = "Map"
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+
 }
+
 
 

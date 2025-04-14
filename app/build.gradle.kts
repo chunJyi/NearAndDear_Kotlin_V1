@@ -78,12 +78,15 @@ dependencies {
 
     implementation ("androidx.datastore:datastore-preferences:1.1.4")
 
-    implementation ("com.google.android.gms:play-services-location:21.0.1")
-
+    implementation ("com.google.android.gms:play-services-location:21.3.0")
     //map
-    implementation(libs.maps.compose)
-    implementation(libs.play.services.maps)
+//    implementation(libs.maps.compose)
 
+    implementation ("com.google.android.gms:play-services-maps:17.0.0")
+
+//    implementation(libs.play.services.maps)
+    implementation (libs.maps.compose.v2100) // Google Maps Compose library
+    implementation(libs.androidx.material3.v120)
     implementation("io.coil-kt:coil-compose:2.6.0")
 
 }

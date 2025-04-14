@@ -81,7 +81,6 @@ object AuthService {
                     avatar_url = avatarUrl.toString(),
                     location_model = currentLocation ,
                     updated_at = updatedAt,
-                    id = 0,
                     created_at = updatedAt,
                     friendList = emptyList()
                 )

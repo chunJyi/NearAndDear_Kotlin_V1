@@ -7,23 +7,25 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.tc.nearanddear.common.DataStoreManager
 import com.tc.nearanddear.data.SupabaseClientProvider
 import com.tc.nearanddear.services.LocationService
+import com.tc.nearanddear.session.SharedViewModel
 import com.tc.nearanddear.ui.screens.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SupabaseClientProvider.initialize(this)
-
         setContent {
             AppTheme {
                 val navController = rememberNavController()
                 val context = LocalContext.current
+                val sharedViewModel: SharedViewModel = viewModel() // <- shared ViewModel here
 
                 NavHost(navController = navController, startDestination = "splash") {
                     composable("splash") {
@@ -34,11 +36,13 @@ class MainActivity : ComponentActivity() {
                                         popUpTo("splash") { inclusive = true }
                                     }
                                 }
+
                                 !userIsLoggedIn -> {
                                     navController.navigate("login") {
                                         popUpTo("splash") { inclusive = true }
                                     }
                                 }
+
                                 else -> {
                                     navController.navigate("home") {
                                         popUpTo("splash") { inclusive = true }
@@ -68,8 +72,12 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable("home") {
-                        HomeScreen()
+                        HomeScreen(navController)
                         startLocationService()
+                    }
+
+                    composable("map") {
+                        MapScreen()//                        startLocationService()
                     }
                 }
             }

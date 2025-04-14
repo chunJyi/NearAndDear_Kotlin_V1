@@ -7,4 +7,5 @@ import com.tc.nearanddear.model.LoginUser
 
 object UserSession {
     var loginUser by mutableStateOf<LoginUser?>(null)
+
 }

@@ -1,5 +1,6 @@
 [versions]
 agp = "8.9.1"
+googleMapsCompose = "2.10.0"
 kotlin = "2.0.21"
 coreKtx = "1.16.0"
 junit = "4.13.2"
@@ -10,10 +11,12 @@ activityCompose = "1.10.1"
 composeBom = "2024.09.00"
 mapsCompose = "2.11.4"
 material3 = "5.6.8"
+material3Version = "1.2.0"
 playServicesMaps = "19.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-material3-v120 = { module = "androidx.compose.material3:material3", version.ref = "material3Version" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -28,6 +31,7 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
+maps-compose-v2100 = { module = "com.google.maps.android:maps-compose", version.ref = "googleMapsCompose" }
 material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
 
