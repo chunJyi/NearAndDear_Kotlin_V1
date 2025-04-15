@@ -41,7 +41,7 @@ import com.tc.nearanddear.R
 import com.tc.nearanddear.session.SharedViewModel
 
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(navController: NavController, sharedViewModel: SharedViewModel) {
     val user = UserSession.loginUser ?: loginUser
     val selectedTab = remember { mutableStateOf(0) }
     val tabs = listOf("Friends", "Request", "Pending")
@@ -70,7 +70,9 @@ fun HomeScreen(navController: NavController) {
         Spacer(Modifier.height(16.dp))
 
         Spacer(Modifier.height(16.dp))
-        FriendCard(navController, tabs, selectedTab.value) { selectedTab.value = it }
+        FriendCard(navController, sharedViewModel, tabs, selectedTab.value) {
+            selectedTab.value = it
+        }
     }
 }
 
@@ -213,6 +215,7 @@ private fun FriendsStoryRow(friendList: List<FriendModel>?) {
 @Composable
 private fun FriendCard(
     navController: NavController,
+    sharedViewModel: SharedViewModel,
     tabs: List<String>,
     selectedIndex: Int,
     onTabSelected: (Int) -> Unit
@@ -230,27 +233,20 @@ private fun FriendCard(
         ) {
             FriendsTabs(tabs, selectedIndex, onTabSelected)
             Spacer(Modifier.height(8.dp))
-            FriendListHeader(tabs[selectedIndex])
+            FriendListHeader(navController, tabs[selectedIndex])
             Spacer(Modifier.height(8.dp))
             when (selectedIndex) {
                 0 -> FriendList(
-                    navController,
+                    navController, sharedViewModel,
                     loginUser?.friendList?.filter { it.friendState == FriendState.FRIEND })
 
                 1 -> FriendList(
-                    navController,
+                    navController, sharedViewModel,
                     loginUser?.friendList?.filter { it.friendState == FriendState.REQUEST })
 
                 else -> PendingList(loginUser?.friendList?.filter { it.friendState == FriendState.PENDING })
 
             }
-//            PendingList(
-//                when (selectedIndex) {
-//                    0 -> loginUser?.friendList?.filter { it.friendState == FriendState.FRIEND }
-//                    1 -> loginUser?.friendList?.filter { it.friendState == FriendState.REQUEST }
-//                    else -> loginUser?.friendList?.filter { it.friendState == FriendState.PENDING }
-//                }
-//            )
         }
     }
 }
@@ -300,7 +296,7 @@ private fun FriendsTabs(tabs: List<String>, selectedTab: Int, onTabSelected: (In
 
 
 @Composable
-private fun FriendListHeader(title: String) {
+private fun FriendListHeader(navController: NavController, title: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -308,7 +304,7 @@ private fun FriendListHeader(title: String) {
     ) {
         Text("$title List", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Button(
-            onClick = {},
+            onClick = { navController.navigate("search") },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black,
                 contentColor = Color.White
@@ -444,7 +440,11 @@ private fun PendingList(friends: List<FriendModel>?) {
 
 @SuppressLint("ContextCastToActivity")
 @Composable
-private fun FriendList(navController: NavController, friends: List<FriendModel>?) {
+private fun FriendList(
+    navController: NavController,
+    sharedViewModel: SharedViewModel,
+    friends: List<FriendModel>?
+) {
     var selectedFriend by remember { mutableStateOf<FriendModel?>(null) }
 
     Column(
@@ -492,7 +492,6 @@ private fun FriendList(navController: NavController, friends: List<FriendModel>?
     }
 
     selectedFriend?.let { friend ->
-        val sharedViewModel: SharedViewModel = viewModel(LocalContext.current as ComponentActivity)
 
         AlertDialog(
             onDismissRequest = { selectedFriend = null },
@@ -562,8 +561,6 @@ private fun FriendList(navController: NavController, friends: List<FriendModel>?
                                 // Navigate to map page with friend
                                 sharedViewModel.setFriend(friend.userID)
                                 navController.navigate("map")
-//                                navigateToMap(friend)
-                                selectedFriend = null
                             }) {
                                 Icon(
                                     imageVector = Icons.Default.LocationOn,

@@ -72,12 +72,16 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable("home") {
-                        HomeScreen(navController)
+                        HomeScreen(navController, sharedViewModel)
                         startLocationService()
                     }
 
                     composable("map") {
-                        MapScreen()//                        startLocationService()
+                        MapScreen(navController, sharedViewModel)
+                    }
+
+                    composable("search") {
+                        SearchScreen(context, navController)
                     }
                 }
             }

@@ -1,7 +1,6 @@
 package com.tc.nearanddear.ui.screens
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -26,7 +25,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(context: Context, onSplashFinished: (Boolean, Boolean) -> Unit) {
     LaunchedEffect(Unit) {
-        delay(2000) // Simulate splash delay
+//        delay(2000) // Simulate splash delay
         val isUserLoggedIn = DataStoreManager.isUserLoggedIn(context)
         val isOnboardingDone = DataStoreManager.isOnboardingCompleted(context)
 

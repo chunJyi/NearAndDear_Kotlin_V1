@@ -13,31 +13,34 @@ data class LoginUser(
     val avatar_url: String,
     var location_model: LocationModel?,
     val userID: String,
-    @SerialName("updated_at")
-    val updated_at: String,
+    @SerialName("updated_at") val updated_at: String,
     val friendList: List<FriendModel>? = emptyList() // fix here
 
 
+)
 
+@Serializable
+data class LoginUserLite(
+    val name: String, val location_model: LocationModel
 )
 
 @Serializable
 data class LocationModel(
-    val latitude: Double,
-    val longitude: Double
+    val latitude: Double, val longitude: Double
 )
 
 @Serializable
 data class FriendModel(
-    val userID: String,
-    val name: String,
-    val friendState: FriendState
+    val userID: String, val name: String, val friendState: FriendState
 )
 
 @Serializable
 enum class FriendState {
-    FRIEND,
-    REQUEST,
-    PENDING
+    FRIEND, REQUEST, PENDING
 }
+
+@Serializable
+data class SearchResult(
+    val name: String, val userID: String, val avatar_url: String
+)
 
