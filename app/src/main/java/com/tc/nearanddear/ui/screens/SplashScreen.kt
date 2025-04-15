@@ -31,6 +31,7 @@ fun SplashScreen(context: Context, onSplashFinished: (Boolean, Boolean) -> Unit)
 
         if (isUserLoggedIn) {
             val userId = DataStoreManager.getUserID(context)
+
             UserSession.loginUser = fetchUserById(userId)
         }
         onSplashFinished(isUserLoggedIn, isOnboardingDone)

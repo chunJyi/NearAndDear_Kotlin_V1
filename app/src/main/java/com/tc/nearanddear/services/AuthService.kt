@@ -64,9 +64,9 @@ object AuthService {
             val user = session?.user ?: return@withContext null
 
             val userId = user.id
-            val name = user.userMetadata?.get("name") ?: "No Name"
             val email = user.email ?: "No Email"
-            val avatarUrl = user.userMetadata?.get("avatar_url")?: ""
+            val name = user.userMetadata?.get("name")?.toString()?.trim('"') ?: "No Name"
+            val avatarUrl = user.userMetadata?.get("avatar_url")?.toString()?.trim('"') ?: ""
             val updatedAt = Instant.now().toString()
 
             val existingUsers = client.from("loginUser").select {

@@ -18,6 +18,7 @@ import com.tc.nearanddear.session.SharedViewModel
 import com.tc.nearanddear.ui.screens.*
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SupabaseClientProvider.initialize(this)
@@ -72,7 +73,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable("home") {
-                        HomeScreen(navController, sharedViewModel)
+                        HomeScreen(navController, context, sharedViewModel)
                         startLocationService()
                     }
 

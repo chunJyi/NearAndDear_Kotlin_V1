@@ -1,9 +1,12 @@
 package com.tc.nearanddear.ui.screens
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -39,9 +42,13 @@ import com.tc.nearanddear.session.UserSession
 import com.tc.nearanddear.session.UserSession.loginUser
 import com.tc.nearanddear.R
 import com.tc.nearanddear.session.SharedViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
-fun HomeScreen(navController: NavController, sharedViewModel: SharedViewModel) {
+fun HomeScreen(navController: NavController, context: Context, sharedViewModel: SharedViewModel) {
     val user = UserSession.loginUser ?: loginUser
     val selectedTab = remember { mutableStateOf(0) }
     val tabs = listOf("Friends", "Request", "Pending")
@@ -70,7 +77,7 @@ fun HomeScreen(navController: NavController, sharedViewModel: SharedViewModel) {
         Spacer(Modifier.height(16.dp))
 
         Spacer(Modifier.height(16.dp))
-        FriendCard(navController, sharedViewModel, tabs, selectedTab.value) {
+        FriendCard(navController, context, sharedViewModel, tabs, selectedTab.value) {
             selectedTab.value = it
         }
     }
@@ -85,12 +92,9 @@ private fun Header() {
     ) {
         Text("Near & Dear", fontSize = 30.sp, fontFamily = FontFamily.Cursive)
         Button(
-            onClick = {},
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Red,
-                contentColor = Color.White
-            ),
-            modifier = Modifier.height(40.dp)
+            onClick = {}, colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Red, contentColor = Color.White
+            ), modifier = Modifier.height(40.dp)
         ) {
             Text("STOP", fontSize = 14.sp)
         }
@@ -151,8 +155,7 @@ fun UserLocationMapCard(user: LoginUser?) {
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE8ECEB))
     ) {
         GoogleMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState
+            modifier = Modifier.fillMaxSize(), cameraPositionState = cameraPositionState
         ) {
             Marker(
                 state = MarkerState(position = userLatLng),
@@ -199,9 +202,7 @@ private fun FriendsStoryRow(friendList: List<FriendModel>?) {
                         )
                     }
                     Text(
-                        friend.name,
-                        fontSize = 12.sp,
-                        maxLines = 1, // Limit to 1 line
+                        friend.name, fontSize = 12.sp, maxLines = 1, // Limit to 1 line
                         overflow = TextOverflow.Ellipsis, // Add ellipsis when text overflows
                         modifier = Modifier.padding(top = 4.dp)
                     )
@@ -215,6 +216,7 @@ private fun FriendsStoryRow(friendList: List<FriendModel>?) {
 @Composable
 private fun FriendCard(
     navController: NavController,
+    context: Context,
     sharedViewModel: SharedViewModel,
     tabs: List<String>,
     selectedIndex: Int,
@@ -237,14 +239,16 @@ private fun FriendCard(
             Spacer(Modifier.height(8.dp))
             when (selectedIndex) {
                 0 -> FriendList(
-                    navController, sharedViewModel,
+                    navController,
+                    sharedViewModel,
                     loginUser?.friendList?.filter { it.friendState == FriendState.FRIEND })
 
-                1 -> FriendList(
-                    navController, sharedViewModel,
+                1 -> RequestList(
+                    context,
                     loginUser?.friendList?.filter { it.friendState == FriendState.REQUEST })
 
-                else -> PendingList(loginUser?.friendList?.filter { it.friendState == FriendState.PENDING })
+                else -> PendingList(
+                    loginUser?.friendList?.filter { it.friendState == FriendState.PENDING })
 
             }
         }
@@ -254,8 +258,7 @@ private fun FriendCard(
 @Composable
 private fun FriendsTabs(tabs: List<String>, selectedTab: Int, onTabSelected: (Int) -> Unit) {
     TabRow(
-        selectedTabIndex = selectedTab,
-        indicator = { tabPositions ->
+        selectedTabIndex = selectedTab, indicator = { tabPositions ->
             TabRowDefaults.Indicator(
                 Modifier
                     .tabIndicatorOffset(tabPositions[selectedTab])
@@ -266,8 +269,7 @@ private fun FriendsTabs(tabs: List<String>, selectedTab: Int, onTabSelected: (In
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .background(Color(0xFF000000)), // Outer tab row background
-        containerColor = Color.Transparent,
-        contentColor = Color.Black
+        containerColor = Color.Transparent, contentColor = Color.Black
     ) {
         tabs.forEachIndexed { index, title ->
             Tab(
@@ -288,8 +290,7 @@ private fun FriendsTabs(tabs: List<String>, selectedTab: Int, onTabSelected: (In
                         fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
                         fontSize = 14.sp
                     )
-                }
-            )
+                })
         }
     }
 }
@@ -304,72 +305,11 @@ private fun FriendListHeader(navController: NavController, title: String) {
     ) {
         Text("$title List", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Button(
-            onClick = { navController.navigate("search") },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Black,
-                contentColor = Color.White
-            ),
-            modifier = Modifier.height(38.dp)
+            onClick = { navController.navigate("search") }, colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Black, contentColor = Color.White
+            ), modifier = Modifier.height(38.dp)
         ) {
             Text("Add", fontSize = 14.sp)
-        }
-    }
-}
-
-@Composable
-private fun RequestList(friends: List<FriendModel>?) {
-    var expandedIndex by remember { mutableIntStateOf(-1) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 100.dp, max = 300.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
-        friends?.forEachIndexed { index, item ->
-            val isExpanded = expandedIndex == index
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expandedIndex = if (isExpanded) -1 else index }
-                    .padding(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = when (item.friendState) {
-                            FriendState.FRIEND -> Icons.Default.Favorite
-                            FriendState.REQUEST, FriendState.PENDING -> Icons.Default.Star
-                            else -> Icons.Default.Person
-                        },
-                        contentDescription = null,
-                        tint = when (item.friendState) {
-                            FriendState.FRIEND -> Color(0xFFF44336)
-                            FriendState.REQUEST -> Color(0xFFFFA000)
-                            FriendState.PENDING -> Color(0xFF2563EB)
-                            else -> Color.Gray
-                        },
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(item.name, fontWeight = FontWeight.Bold)
-                        Text("ID: ${item.userID}", fontSize = 12.sp, color = Color.Gray)
-                    }
-                    Icon(
-                        imageVector = if (isExpanded) Icons.Default.ArrowDropDown else Icons.Default.Add,
-                        contentDescription = null,
-                        tint = Color.Gray
-                    )
-                }
-                if (isExpanded) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Extra actions or details here...",
-                        fontSize = 13.sp,
-                        color = Color.DarkGray
-                    )
-                }
-            }
         }
     }
 }
@@ -390,12 +330,63 @@ private fun PendingList(friends: List<FriendModel>?) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expandedIndex = if (isExpanded) -1 else index }
-                    .padding(12.dp)
-            ) {
+                    .padding(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = when (item.friendState) {
+                            FriendState.FRIEND -> Icons.Default.Favorite
+                            FriendState.REQUEST, FriendState.PENDING -> Icons.Default.Star
+                            else -> Icons.Default.Person
+                        }, contentDescription = null, tint = when (item.friendState) {
+                            FriendState.FRIEND -> Color(0xFFF44336)
+                            FriendState.REQUEST -> Color(0xFFFFA000)
+                            FriendState.PENDING -> Color(0xFF2563EB)
+                            else -> Color.Gray
+                        }, modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(item.name, fontWeight = FontWeight.Bold)
+                        Text("ID: ${item.userID}", fontSize = 12.sp, color = Color.Gray)
+                    }
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.ArrowDropDown else Icons.Default.Add,
+                        contentDescription = null,
+                        tint = Color.Gray
+                    )
+                }
+                if (isExpanded) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Extra actions or details here...", fontSize = 13.sp, color = Color.DarkGray
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RequestList(context: Context, friends: List<FriendModel>?) {
+    var expandedIndex by remember { mutableIntStateOf(-1) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 100.dp, max = 300.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        friends?.forEachIndexed { index, item ->
+            val isExpanded = expandedIndex == index
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expandedIndex = if (isExpanded) -1 else index }
+                    .padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Avatar image
                     Image(
-                        painter = rememberAsyncImagePainter(item.name), // Assuming the URL of the avatar
+                        painter = rememberAsyncImagePainter("https://ui-avatars.com/api/?name=" + item.name), // Assuming the URL of the avatar
                         contentDescription = null,
                         modifier = Modifier
                             .size(40.dp)
@@ -406,34 +397,144 @@ private fun PendingList(friends: List<FriendModel>?) {
                     // Name and ID
                     Column(Modifier.weight(1f)) {
                         Text(item.name, fontWeight = FontWeight.Bold)
-                        Text("ID: ${item.userID}", fontSize = 12.sp, color = Color.Gray)
+                        Text(formatUserId(item.userID), fontSize = 12.sp, color = Color.Gray)
                     }
-                    Button(
-                        onClick = { /* Your action */ },
-                        modifier = Modifier.size(30.dp),
-                        contentPadding = PaddingValues(0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
-                    ) {
-                        Icon(
-                            painter = rememberAsyncImagePainter(item.name),
-                            contentDescription = "Go",
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.ArrowDropDown else Icons.Default.MoreVert,
+                        contentDescription = null,
+                        tint = Color.Gray
+                    )
 
                 }
                 // Show extra details when expanded
                 if (isExpanded) {
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Extra actions or details here...",
-                        fontSize = 13.sp,
-                        color = Color.DarkGray
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Button(
+                            onClick = { removeFriend(context, item.userID) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD90000))
+                        ) {
+                            Text("Cancel")
+                        }
+                        Spacer(Modifier.width(15.dp))
+
+                        Button(
+                            onClick = { confirmFriend(context, item.userID) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0542F6)) // Green
+                        ) {
+                            Text("Confirm")
+                        }
+                    }
+
                 }
             }
         }
+    }
+}
+
+private fun confirmFriend(context: Context, friendUserId: String) {
+
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val currentUserId = UserSession.loginUser?.userID ?: "";
+            val currentUserFriendList = fetchUserById(currentUserId)?.friendList
+            val friendUserFriendList = fetchUserById(friendUserId)?.friendList
+
+            if (currentUserFriendList == null || friendUserFriendList === null) {
+                showToastOnMain(context, "bad request")
+                return@launch
+            }
+
+            if (!isIncludeFriend(currentUserFriendList, friendUserId)) {
+                showToastOnMain(context, "User already in friend list")
+                return@launch
+            }
+
+            if (!isIncludeFriend(friendUserFriendList, currentUserId)) {
+                showToastOnMain(context, "User already in friend list")
+                return@launch
+            }
+
+            val updatedCurrentList = currentUserFriendList.toMutableList().apply {
+                find { it.userID == friendUserId }?.let {
+                    it.friendState = FriendState.FRIEND // or whatever state you want
+                }
+            }
+
+            val updatedFriendList = friendUserFriendList.toMutableList().apply {
+                find { it.userID == currentUserId }?.let {
+                    it.friendState = FriendState.FRIEND // or whatever state you want
+                }
+            }
+
+            updateFriendListInDB(currentUserId, updatedCurrentList)
+            updateFriendListInDB(friendUserId, updatedFriendList)
+
+            showToastOnMain(context, "Friend added successfully!")
+            loginUser = fetchUserById(currentUserId);
+
+        } catch (e: Exception) {
+            showToastOnMain(context, "Error adding user: ${e.message}")
+        }
+    }
+}
+
+private fun removeFriend(context: Context, friendUserId: String) {
+
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val currentUserId = loginUser?.userID ?: "";
+            val currentUserFriendList = fetchUserById(currentUserId)?.friendList
+            val friendUserFriendList = fetchUserById(friendUserId)?.friendList
+
+            if (currentUserFriendList == null || friendUserFriendList === null) {
+                showToastOnMain(context, "bad request")
+                return@launch
+            }
+
+//            if (!isIncludeFriend(currentUserFriendList, friendUserId)) {
+//                showToastOnMain(context, "User does not request in friend list")
+//                return@launch
+//            }
+//
+//            if (!isIncludeFriend(friendUserFriendList, currentUserId)) {
+//                showToastOnMain(context, "User does not request in friend list")
+//                return@launch
+//            }
+
+            val updatedCurrentList = currentUserFriendList.toMutableList().apply {
+                removeIf { it.userID == friendUserId }
+            }
+
+            val updatedFriendList = friendUserFriendList.toMutableList().apply {
+                removeIf { it.userID == currentUserId }
+            }
+
+            updateFriendListInDB(currentUserId, updatedCurrentList)
+            updateFriendListInDB(friendUserId, updatedFriendList)
+
+            showToastOnMain(context, "Friend added successfully!")
+
+            loginUser = fetchUserById(currentUserId);
+
+        } catch (e: Exception) {
+            showToastOnMain(context, "Error adding user: ${e.message}")
+        }
+    }
+}
+
+private fun isIncludeFriend(friendList: List<FriendModel>, userIdToCheck: String): Boolean {
+    return friendList.any { userIdToCheck == it.userID }
+}
+
+fun formatUserId(userId: String): String {
+    return if (userId.length <= 10) {
+        userId
+    } else {
+        "${userId.take(5)}*****${userId.takeLast(5)}"
     }
 }
 
@@ -441,9 +542,7 @@ private fun PendingList(friends: List<FriendModel>?) {
 @SuppressLint("ContextCastToActivity")
 @Composable
 private fun FriendList(
-    navController: NavController,
-    sharedViewModel: SharedViewModel,
-    friends: List<FriendModel>?
+    navController: NavController, sharedViewModel: SharedViewModel, friends: List<FriendModel>?
 ) {
     var selectedFriend by remember { mutableStateOf<FriendModel?>(null) }
 
@@ -458,23 +557,19 @@ private fun FriendList(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { selectedFriend = item }
-                    .padding(12.dp)
-            ) {
+                    .padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = when (item.friendState) {
                             FriendState.FRIEND -> Icons.Default.Favorite
                             FriendState.REQUEST, FriendState.PENDING -> Icons.Default.Star
                             else -> Icons.Default.Person
-                        },
-                        contentDescription = null,
-                        tint = when (item.friendState) {
+                        }, contentDescription = null, tint = when (item.friendState) {
                             FriendState.FRIEND -> Color(0xFFF44336)
                             FriendState.REQUEST -> Color(0xFFFFA000)
                             FriendState.PENDING -> Color(0xFF2563EB)
                             else -> Color.Gray
-                        },
-                        modifier = Modifier.size(20.dp)
+                        }, modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -505,8 +600,7 @@ private fun FriendList(
                         modifier = Modifier.align(Alignment.TopEnd)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close"
+                            imageVector = Icons.Default.Close, contentDescription = "Close"
                         )
                     }
 
@@ -570,11 +664,8 @@ private fun FriendList(
                         }
                     }
                 }
-            }
-        )
+            })
     }
-
-
 }
 
 

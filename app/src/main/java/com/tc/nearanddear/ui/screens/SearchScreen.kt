@@ -1,5 +1,6 @@
 package com.tc.nearanddear.ui.screens
 
+//noinspection SuspiciousImport
 import android.R
 import android.content.Context
 import android.widget.Toast
@@ -25,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -35,8 +35,11 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.tc.nearanddear.data.SupabaseClientProvider.client
 import com.tc.nearanddear.model.FriendModel
+import com.tc.nearanddear.model.FriendState
+import com.tc.nearanddear.model.LoginUser
 import com.tc.nearanddear.model.SearchResult
 import com.tc.nearanddear.session.UserSession
+import com.tc.nearanddear.session.UserSession.loginUser
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.CoroutineScope
@@ -72,8 +75,7 @@ class SharedViewModel1 : ViewModel() {
                     filter {
                         ilike("name", "%$userName%")
                     }
-                }
-                .decodeList<SearchResult>()
+                }.decodeList<SearchResult>()
         }.getOrElse {
             println("Error fetching user: ${it.message}")
             emptyList()
@@ -91,15 +93,14 @@ fun SearchScreen(context: Context, navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Color(0xFFEEEDF2))
     ) {
         SearchHeader(onBackClick = { navController.popBackStack() })
         SearchBar(
             query = searchQuery,
             onQueryChange = { searchQuery = it },
             onClearQuery = { searchQuery = "" },
-            onSearch = { sharedViewModel.searchUsers(searchQuery) }
-        )
+            onSearch = { sharedViewModel.searchUsers(searchQuery) })
         SearchResultsList(context, results = sharedViewModel.userResults.collectAsState().value)
     }
 }
@@ -112,7 +113,7 @@ fun SearchHeader(onBackClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(150.dp)
-            .background(Color.DarkGray)
+            .background(Color(0xFFA8B0D6))
     ) {
         Column(
             modifier = Modifier
@@ -128,9 +129,7 @@ fun SearchHeader(onBackClick: () -> Unit) {
                     color = Color.White
                 )
                 Text(
-                    text = "It's a functional search system.",
-                    fontSize = 16.sp,
-                    color = Color.White
+                    text = "It's a functional search system.", fontSize = 16.sp, color = Color.White
                 )
             }
             Button(
@@ -155,17 +154,14 @@ fun SearchHeader(onBackClick: () -> Unit) {
 // --- SearchBar Composable ---
 @Composable
 fun SearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onClearQuery: () -> Unit,
-    onSearch: () -> Unit
+    query: String, onQueryChange: (String) -> Unit, onClearQuery: () -> Unit, onSearch: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFFF5F5F5))
+            .background(Color(0xFFA8B0D6))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -182,22 +178,18 @@ fun SearchBar(
                 onValueChange = onQueryChange,
                 modifier = Modifier.fillMaxWidth(),
                 textStyle = LocalTextStyle.current.copy(
-                    color = Color.Black,
-                    fontSize = 16.sp
+                    color = Color.Black, fontSize = 16.sp
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
                 decorationBox = { innerTextField ->
                     if (query.isEmpty()) {
                         Text(
-                            text = "What are you looking for?",
-                            color = Color.Gray,
-                            fontSize = 16.sp
+                            text = "What are you looking for?", color = Color.Gray, fontSize = 16.sp
                         )
                     }
                     innerTextField()
-                }
-            )
+                })
         }
         if (query.isNotEmpty()) {
             Icon(
@@ -206,8 +198,7 @@ fun SearchBar(
                 tint = Color.Gray,
                 modifier = Modifier
                     .size(24.dp)
-                    .clickable { onClearQuery() }
-            )
+                    .clickable { onClearQuery() })
         }
     }
 }
@@ -221,7 +212,7 @@ fun SearchResultsList(context: Context, results: List<SearchResult>) {
             .padding(16.dp),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor =Color(0xFFA8B0D6))
     ) {
         if (results.isEmpty()) {
             Box(
@@ -261,21 +252,17 @@ fun SearchResultsList(context: Context, results: List<SearchResult>) {
                     color = Color.Black,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-
                 // Divider
-                Divider(
-                    color = Color.LightGray,
-                    thickness = 1.dp,
-                    modifier = Modifier.fillMaxWidth()
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth(),
+                    thickness = 1.dp, color = Color.LightGray
                 )
-
                 // LazyColumn
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 5.dp, vertical = 5.dp)
-                        .heightIn(min = 300.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .heightIn(min = 300.dp), verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(results) { result ->
                         SearchResultItem(context, result = result)
@@ -287,14 +274,11 @@ fun SearchResultsList(context: Context, results: List<SearchResult>) {
     }
 }
 
-
 // --- SearchResultItem Composable ---
 @Composable
 fun SearchResultItem(context: Context, result: SearchResult) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
             painter = rememberAsyncImagePainter(result.avatar_url),
@@ -321,8 +305,7 @@ fun SearchResultItem(context: Context, result: SearchResult) {
         Button(
             onClick = {
                 addUser(
-                    context, result.userID,
-                    friendUserId = UserSession.loginUser?.userID ?: ""
+                    context, UserSession.loginUser, result
                 )
             },
             modifier = Modifier
@@ -337,9 +320,7 @@ fun SearchResultItem(context: Context, result: SearchResult) {
                 horizontalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    Icons.Filled.Add,
-                    contentDescription = "Add",
-                    modifier = Modifier.width(10.dp)
+                    Icons.Filled.Add, contentDescription = "Add", modifier = Modifier.width(10.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
@@ -353,54 +334,76 @@ fun SearchResultItem(context: Context, result: SearchResult) {
     }
 }
 
-fun addUser(context: Context, currentUserId: String, friendUserId: String) {
-    if (friendUserId?.isEmpty() == true) {
-        return
-    }
-    val scope = CoroutineScope(Dispatchers.IO)
-    scope.launch {
+fun addUser(
+    context: Context, currentUser: LoginUser?, friendUser: SearchResult
+) {
+    if (friendUser.userID.isEmpty() || currentUser == null) return
+
+    CoroutineScope(Dispatchers.IO).launch {
         try {
-            // Step 1: Fetch current user's friendList
-            val response = client.from("loginUser")
-                .select(columns = Columns.list("friendList")) {
-                    filter {
-                        eq("userID", currentUserId)
-                    }
-                }
-                .decodeSingle<Map<String, List<FriendModel>>>()
 
-            val currentList =
-                (response["friendList"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
 
-            // Step 2: Check if friend already added
-            if (friendUserId in currentList) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "User already in friend list", Toast.LENGTH_SHORT)
-                        .show()
-                }
+            val currentUserId = currentUser.userID
+            val friendUserId = friendUser.userID
+
+            if (currentUserId == friendUserId) {
+                showToastOnMain(context, "can not add your self")
+                return@launch
+            }
+            val currentUserFriendList = fetchUserById(currentUserId)?.friendList
+            val friendUserFriendList = fetchUserById(friendUserId)?.friendList
+
+            if (currentUserFriendList == null || friendUserFriendList === null) {
+                showToastOnMain(context, "bad request")
                 return@launch
             }
 
-            // Step 3: Add friend to list
-            val updatedList = currentList.toMutableList().apply { add(friendUserId) }
-
-            // Step 4: Update Supabase
-            client.from("loginUser")
-                .update(mapOf("friendList" to updatedList)) {
-                    filter {
-                        eq("userID", currentUserId)
-                    }
-                }
-
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Friend added successfully!", Toast.LENGTH_SHORT).show()
+            if (isAlreadyFriend(currentUserFriendList, friendUserId)) {
+                showToastOnMain(context, "User already in friend list")
+                return@launch
             }
 
+            if (isAlreadyFriend(friendUserFriendList, currentUserId)) {
+                showToastOnMain(context, "User already in friend list")
+                return@launch
+            }
+
+            val updatedCurrentList = currentUserFriendList.toMutableList().apply {
+                add(createFriendEntry(friendUserId, friendUser.name, FriendState.PENDING))
+            }
+
+            val updatedFriendList = friendUserFriendList.toMutableList().apply {
+                add(createFriendEntry(currentUserId, currentUser.name, FriendState.REQUEST))
+            }
+
+            updateFriendListInDB(currentUserId, updatedCurrentList)
+            updateFriendListInDB(friendUserId, updatedFriendList)
+            loginUser = fetchUserById(currentUserId);
+
+            showToastOnMain(context, "Friend added successfully!")
         } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Error adding user: ${e.message}", Toast.LENGTH_LONG).show()
-            }
+            showToastOnMain(context, "Error adding user: ${e.message}")
         }
+    }
+}
+
+private fun isAlreadyFriend(friendList: List<FriendModel>, userIdToCheck: String): Boolean {
+    return friendList.any { userIdToCheck == it.userID }
+}
+
+private fun createFriendEntry(userID: String, name: String, state: FriendState): FriendModel {
+    return FriendModel(userID = userID, name = name, friendState = state)
+}
+
+internal suspend fun updateFriendListInDB(userId: String, friendList: List<FriendModel>) {
+    client.from("loginUser").update(mapOf("friendList" to friendList)) {
+        filter { eq("userID", userId) }
+    }
+}
+
+internal suspend fun showToastOnMain(context: Context, message: String) {
+    withContext(Dispatchers.Main) {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 }
 

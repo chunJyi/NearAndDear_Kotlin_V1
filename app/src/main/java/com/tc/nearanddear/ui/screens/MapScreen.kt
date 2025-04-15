@@ -1,5 +1,6 @@
 package com.tc.nearanddear.ui.screens
 
+import android.graphics.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,15 +30,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -51,10 +49,15 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.maps.android.compose.CameraPositionState
+import com.google.maps.android.compose.rememberMarkerState
+import com.tc.nearanddear.R
 import com.tc.nearanddear.data.SupabaseClientProvider.client
 import com.tc.nearanddear.model.FriendModel
 import com.tc.nearanddear.model.LoginUser
@@ -65,6 +68,7 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
+import androidx.core.graphics.createBitmap
 
 sealed class MapScreenState {
     object Loading : MapScreenState()
@@ -124,7 +128,7 @@ fun MapScreen(navController: NavController, sharedViewModel: SharedViewModel = v
                 }
             }, colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color(0xFF000000).copy(alpha = 0.1f) // 10% opacity
-               ), modifier = Modifier.height(40.dp) // Custom height for the TopAppBar
+            ), modifier = Modifier.height(40.dp) // Custom height for the TopAppBar
         )
 
         // Bottom Sheet
@@ -207,22 +211,29 @@ fun GoogleMapView(
     cameraPositionState: CameraPositionState,
     onMapClick: (LatLng) -> Unit
 ) {
-    // Define the initial zoom level you want to set by default
-    val defaultZoom = 10f // This can be adjusted as needed
+    val context = LocalContext.current
 
-    // Define custom GoogleMapOptions
-    val googleMapOptions = GoogleMapOptions().apply {
-        mapType(MapType.HYBRID.value)
-        // Set the initial zoom level to default zoom
-        CameraPosition.builder().target(
-            LatLng(
-                sharedViewModel.selectedUser?.location_model?.latitude ?: 0.0,
-                sharedViewModel.selectedUser?.location_model?.longitude ?: 0.0
-            )
-        ).zoom(defaultZoom).build();
+    val selectedUser = sharedViewModel.selectedUser
+    val userLatLng = LatLng(
+        selectedUser?.location_model?.latitude ?: 0.0,
+        selectedUser?.location_model?.longitude ?: 0.0
+    )
+
+    val markerState = rememberMarkerState(position = userLatLng)
+
+    // Convert local drawable to BitmapDescriptor
+    val bitmapDescriptor = remember {
+        val drawable = ContextCompat.getDrawable(context, R.drawable.marker)
+        val bitmap = drawable?.let {
+            createBitmap(96, 96).also { bmp ->
+                val canvas = Canvas(bmp)
+                it.setBounds(0, 0, canvas.width, canvas.height)
+                it.draw(canvas)
+            }
+        }
+        bitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
     }
 
-    // Define custom UI settings
     val uiSettings = MapUiSettings(
         zoomControlsEnabled = true,
         compassEnabled = true,
@@ -234,23 +245,86 @@ fun GoogleMapView(
     GoogleMap(
         cameraPositionState = cameraPositionState,
         modifier = Modifier.fillMaxSize(),
-        googleMapOptionsFactory = { googleMapOptions },
         properties = MapProperties(
-            isBuildingEnabled = true, isMyLocationEnabled = true
-        ), // Enable the "blue dot"
-        onMapClick = onMapClick,
-        uiSettings = uiSettings
+            isBuildingEnabled = true,
+            isMyLocationEnabled = true
+        ),
+        uiSettings = uiSettings,
+        onMapClick = onMapClick // Optional: for general use
     ) {
-        val latLng = LatLng(
-            sharedViewModel.selectedUser?.location_model?.latitude ?: 0.0,
-            sharedViewModel.selectedUser?.location_model?.longitude ?: 0.0
-        )
         Marker(
-            state = MarkerState(position = latLng),
-            title = sharedViewModel.selectedUser?.name ?: "Selected User"
+            state = markerState,
+            title = selectedUser?.name ?: "Selected User",
+            icon = bitmapDescriptor
         )
+
+        LaunchedEffect(Unit) {
+            markerState.showInfoWindow() // Always show the info window on start
+        }
     }
 }
+
+
+//fun getBitmapFromDrawable(context: Context, @DrawableRes drawableRes: Int): Bitmap {
+//    val drawable = ContextCompat.getDrawable(context, drawableRes)
+//    val bitmap = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888)
+//    val canvas = Canvas(bitmap)
+//    drawable?.setBounds(0, 0, canvas.width, canvas.height)
+//    drawable?.draw(canvas)
+//    return bitmap
+//}
+
+
+//@Composable
+//fun GoogleMapView(
+//    sharedViewModel: SharedViewModel,
+//    cameraPositionState: CameraPositionState,
+//    onMapClick: (LatLng) -> Unit
+//) {
+//    // Define the initial zoom level you want to set by default
+//    val defaultZoom = 10f // This can be adjusted as needed
+//
+//    // Define custom GoogleMapOptions
+//    val googleMapOptions = GoogleMapOptions().apply {
+//        mapType(MapType.HYBRID.value)
+//        // Set the initial zoom level to default zoom
+//        CameraPosition.builder().target(
+//            LatLng(
+//                sharedViewModel.selectedUser?.location_model?.latitude ?: 0.0,
+//                sharedViewModel.selectedUser?.location_model?.longitude ?: 0.0
+//            )
+//        ).zoom(defaultZoom).build();
+//    }
+//
+//    // Define custom UI settings
+//    val uiSettings = MapUiSettings(
+//        zoomControlsEnabled = true,
+//        compassEnabled = true,
+//        scrollGesturesEnabled = true,
+//        tiltGesturesEnabled = false,
+//        myLocationButtonEnabled = true,
+//    )
+//
+//    GoogleMap(
+//        cameraPositionState = cameraPositionState,
+//        modifier = Modifier.fillMaxSize(),
+//        googleMapOptionsFactory = { googleMapOptions },
+//        properties = MapProperties(
+//            isBuildingEnabled = true, isMyLocationEnabled = true
+//        ), // Enable the "blue dot"
+//        onMapClick = onMapClick,
+//        uiSettings = uiSettings
+//    ) {
+//        val latLng = LatLng(
+//            sharedViewModel.selectedUser?.location_model?.latitude ?: 0.0,
+//            sharedViewModel.selectedUser?.location_model?.longitude ?: 0.0
+//        )
+//        Marker(
+//            state = MarkerState(position = latLng),
+//            title = sharedViewModel.selectedUser?.name ?: "Selected User"
+//        )
+//    }
+//}
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -347,9 +421,6 @@ fun FriendItem(friend: FriendModel, isSelected: Boolean, onClick: () -> Unit) {
     }
 }
 
-data class Friend(
-    val name: String, val profileImageUrl: String // URL or resource ID for the profile picture
-)
 
 
 

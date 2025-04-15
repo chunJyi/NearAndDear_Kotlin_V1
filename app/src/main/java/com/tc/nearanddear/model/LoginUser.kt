@@ -16,7 +16,6 @@ data class LoginUser(
     @SerialName("updated_at") val updated_at: String,
     val friendList: List<FriendModel>? = emptyList() // fix here
 
-
 )
 
 @Serializable
@@ -31,12 +30,21 @@ data class LocationModel(
 
 @Serializable
 data class FriendModel(
-    val userID: String, val name: String, val friendState: FriendState
+    val name: String,
+    val userID: String,
+    var friendState: FriendState
 )
 
 @Serializable
 enum class FriendState {
-    FRIEND, REQUEST, PENDING
+    @SerialName("FRIEND")
+    FRIEND,
+
+    @SerialName("REQUEST")
+    REQUEST,
+
+    @SerialName("PENDING")
+    PENDING
 }
 
 @Serializable
