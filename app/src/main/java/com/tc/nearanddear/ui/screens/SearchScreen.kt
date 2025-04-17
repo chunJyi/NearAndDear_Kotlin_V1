@@ -212,7 +212,7 @@ fun SearchResultsList(context: Context, results: List<SearchResult>) {
             .padding(16.dp),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor =Color(0xFFA8B0D6))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFA8B0D6))
     ) {
         if (results.isEmpty()) {
             Box(
@@ -369,11 +369,25 @@ fun addUser(
             }
 
             val updatedCurrentList = currentUserFriendList.toMutableList().apply {
-                add(createFriendEntry(friendUserId, friendUser.name, FriendState.PENDING))
+                add(
+                    createFriendEntry(
+                        friendUserId,
+                        friendUser.name,
+                        FriendState.PENDING,
+                        friendUser.avatar_url
+                    )
+                )
             }
 
             val updatedFriendList = friendUserFriendList.toMutableList().apply {
-                add(createFriendEntry(currentUserId, currentUser.name, FriendState.REQUEST))
+                add(
+                    createFriendEntry(
+                        currentUserId,
+                        currentUser.name,
+                        FriendState.REQUEST,
+                        currentUser.avatar_url
+                    )
+                )
             }
 
             updateFriendListInDB(currentUserId, updatedCurrentList)
@@ -391,8 +405,13 @@ private fun isAlreadyFriend(friendList: List<FriendModel>, userIdToCheck: String
     return friendList.any { userIdToCheck == it.userID }
 }
 
-private fun createFriendEntry(userID: String, name: String, state: FriendState): FriendModel {
-    return FriendModel(userID = userID, name = name, friendState = state)
+private fun createFriendEntry(
+    userID: String,
+    name: String,
+    state: FriendState,
+    avatar_url: String
+): FriendModel {
+    return FriendModel(userID = userID, name = name, friendState = state, friendAvatarUrl = avatar_url)
 }
 
 internal suspend fun updateFriendListInDB(userId: String, friendList: List<FriendModel>) {

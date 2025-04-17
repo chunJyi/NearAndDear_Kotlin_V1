@@ -7,6 +7,9 @@ import com.tc.nearanddear.model.FriendModel
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class CommonUtils {
 
@@ -21,4 +24,14 @@ class CommonUtils {
 //            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 //        }
 //    }
+
+//    suspend fun formatTimestamp(isoTimestamp: String): String {
+//        val instant = Instant.parse(isoTimestamp)
+//        val formatter = DateTimeFormatter.ofPattern("MM-dd-yy: HH:mm")
+//            .withZone(ZoneId.systemDefault()) // You can specify a different zone if needed
+//
+//        return formatter.format(instant)
+//    }
+
+
 }

@@ -92,7 +92,7 @@ suspend fun fetchUserById(userId: String): LoginUser? {
                 filter { eq("userID", userId) }
             }
             .decodeList<LoginUser>()
-        result.firstOrNull()
+        result.first()
     } catch (e: Exception) {
         e.printStackTrace()
         null

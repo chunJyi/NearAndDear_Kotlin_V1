@@ -13,7 +13,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -22,7 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -43,7 +49,11 @@ import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import androidx.core.graphics.createBitmap
-import com.google.android.gms.maps.GoogleMapOptions
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.tc.nearanddear.common.CommonUtils
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlin.collections.isNotEmpty
 
 sealed class MapScreenState {
@@ -58,7 +68,7 @@ fun MapScreen(navController: NavController, sharedViewModel: SharedViewModel = v
     val selectedID = sharedViewModel.selectedFriend
     var mapScreenState by remember { mutableStateOf<MapScreenState>(MapScreenState.Loading) }
     var showBottomSheet by remember { mutableStateOf(false) }
-    val defaultZoom = 5f;
+    val defaultZoom = 15f;
 
     LaunchedEffect(selectedID) {
         selectedID?.takeIf { it.isNotEmpty() }?.let { id ->
@@ -127,8 +137,19 @@ fun MapScreen(navController: NavController, sharedViewModel: SharedViewModel = v
             }
 
             is MapScreenState.Error -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Failed to load user data.")
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier.align(Alignment.Center)) {
+                        Text("Failed to load user data.")
+                    }
+
+                    FloatingActionButton(
+                        onClick = { showBottomSheet = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(16.dp)
+                    ) {
+                        Icon(Icons.Filled.ArrowDropDown, contentDescription = "Show Friends")
+                    }
                 }
             }
 
@@ -148,7 +169,7 @@ fun MapScreen(navController: NavController, sharedViewModel: SharedViewModel = v
                             .align(Alignment.BottomStart)
                             .padding(16.dp)
                     ) {
-                        Icon(Icons.Filled.Star, contentDescription = "Show Friends")
+                        Icon(Icons.Filled.ArrowDropDown, contentDescription = "Show Friends")
                     }
                 }
             }
@@ -226,107 +247,6 @@ suspend fun getAllDataById(userId: String): LoginUser? {
     }
 }
 
-//@Composable
-//fun GoogleMapView(
-//    sharedViewModel: SharedViewModel,
-//    cameraPositionState: CameraPositionState,
-//    zoomLevel: Float,
-//    onMapClick: (LatLng) -> Unit,
-//) {
-//    val context = LocalContext.current
-//    val selectedUser = sharedViewModel.selectedUser
-//    val lat = selectedUser?.location_model?.latitude ?: "0.0"
-//    val lon = selectedUser?.location_model?.longitude ?: "0.0"
-//    val userLatLng = LatLng(lat.toDouble(), lon.toDouble())
-//
-//    val cameraPositionState = rememberCameraPositionState {
-//        position = CameraPosition.fromLatLngZoom(userLatLng, 15f)
-//    }
-//
-//    val markerState = rememberMarkerState(position = userLatLng)
-//
-//    val bitmapDescriptor = remember {
-//        val drawable = ContextCompat.getDrawable(context, R.drawable.marker)
-//        val bitmap = drawable?.let {
-//            createBitmap(96, 96).also { bmp ->
-//                val canvas = Canvas(bmp)
-//                it.setBounds(0, 0, canvas.width, canvas.height)
-//                it.draw(canvas)
-//            }
-//        }
-//        bitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
-//    }
-//
-//    val uiSettings = MapUiSettings(
-//        zoomControlsEnabled = true,
-//        compassEnabled = true,
-//        scrollGesturesEnabled = true,
-//        tiltGesturesEnabled = false,
-//        myLocationButtonEnabled = true,
-//    )
-//
-//    Box(modifier = Modifier.fillMaxSize()) {
-//        val googleMapOptions = GoogleMapOptions().apply {
-//            mapType(MapType.HYBRID.value)
-//            CameraPosition.builder().target(
-//                LatLng(
-//                    sharedViewModel.selectedUser?.location_model?.latitude?.toDouble() ?: 0.0,
-//                    sharedViewModel.selectedUser?.location_model?.longitude?.toDouble() ?: 0.0
-//                )
-//            ).zoom(zoomLevel).build();
-//        }
-//        GoogleMap(
-//            cameraPositionState = cameraPositionState,
-//            modifier = Modifier.fillMaxSize(),
-//            googleMapOptionsFactory = { googleMapOptions },
-//            properties = MapProperties(
-//                isBuildingEnabled = true, isMyLocationEnabled = true
-//            ), // Enable the "blue dot"
-//            onMapClick = onMapClick,
-//            uiSettings = uiSettings
-//        ) {
-//            val latLng = LatLng(
-//                sharedViewModel.selectedUser?.location_model?.latitude?.toDouble() ?: 0.0,
-//                sharedViewModel.selectedUser?.location_model?.longitude?.toDouble() ?: 0.0
-//            )
-//            Marker(
-//                state = MarkerState(position = latLng),
-//                title = sharedViewModel.selectedUser?.name ?: "Selected User"
-//            )
-//        }
-//
-//        Box(
-//            modifier = Modifier
-//                .width(200.dp)
-//                .padding(10.dp)
-//                .align(Alignment.TopStart)
-//                .background(Color(0xAA909090), shape = RoundedCornerShape(12.dp))
-//                .padding(horizontal = 16.dp, vertical = 8.dp)
-//        ) {
-//            val address = getAddressFromLatLng(
-//                context,
-//                selectedUser?.location_model?.latitude?.toDouble() ?: 0.0,
-//                selectedUser?.location_model?.longitude?.toDouble() ?: 0.0
-//            )
-//
-//            Row(verticalAlignment = Alignment.CenterVertically) {
-//                Icon(
-//                    imageVector = Icons.Default.LocationOn,
-//                    contentDescription = "Location",
-//                    tint = Color.Cyan,
-//                    modifier = Modifier.size(20.dp)
-//                )
-//                Spacer(modifier = Modifier.width(6.dp))
-//                Text(
-//                    text = (selectedUser?.location_model?.updatedAt ?: "No Updated") + address,
-//                    color = Color.White,
-//                    fontSize = 16.sp
-//                )
-//            }
-//        }
-//    }
-//}
-
 @Composable
 fun GoogleMapView(
     viewModel: SharedViewModel,
@@ -343,7 +263,7 @@ fun GoogleMapView(
 
     // Custom marker icon
     val bitmapDescriptor = remember(context) {
-        ContextCompat.getDrawable(context, R.drawable.marker)?.let { drawable ->
+        ContextCompat.getDrawable(context, R.drawable.user_marker)?.let { drawable ->
             createBitmap(96, 96).also { bitmap ->
                 Canvas(bitmap).apply {
                     drawable.setBounds(0, 0, width, height)
@@ -353,6 +273,15 @@ fun GoogleMapView(
         }?.let { BitmapDescriptorFactory.fromBitmap(it) }
     }
 
+    LaunchedEffect(zoomLevel) {
+        val currentLatLng = cameraPositionState.position.target
+        cameraPositionState.animate(
+            update = CameraUpdateFactory.newLatLngZoom(currentLatLng, zoomLevel),
+            durationMs = 1000
+        )
+    }
+
+
     Box(modifier = Modifier.fillMaxSize()) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
@@ -360,7 +289,7 @@ fun GoogleMapView(
             properties = MapProperties(
                 isMyLocationEnabled = true,
                 isBuildingEnabled = true,
-                mapType = MapType.HYBRID // Configurable via parameter if needed
+                mapType = MapType.NORMAL // Configurable via parameter if needed
             ),
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = true,
@@ -398,41 +327,56 @@ private fun LocationInfoCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.width(200.dp),
+        modifier = modifier.width(190.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xAA909090))
+        colors = CardDefaults.cardColors(containerColor = Color(0xBAFFFFFF))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+
             Icon(
-                imageVector = Icons.Default.LocationOn,
-                contentDescription = "Location",
-                tint = Color.Cyan,
-                modifier = Modifier.size(20.dp)
+                painter = painterResource(id = R.drawable.clock), // Replace with your image name
+                contentDescription = "Sync",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(18.dp)
+                // Optional: control the size
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
+
                 text = buildString {
-                    append(user?.location_model?.updatedAt ?: "No Update")
-//                    append(" ")
-//                    append(
-//                        user?.location_model?.let {
-//                            getAddressFromLatLng(
-//                                context,
-//                                it.latitude.toDoubleOrNull() ?: 0.0,
-//                                it.longitude.toDoubleOrNull() ?: 0.0
-//                            )
-//                        } ?: "Address not found"
-//                    )
+                    append(
+                        user?.location_model?.let {
+                            val instant = Instant.parse(user?.location_model?.updatedAt)
+                            val formatter = DateTimeFormatter.ofPattern("MM-dd-yy: HH:mm")
+                                .withZone(ZoneId.systemDefault()) // You can specify a different zone if needed
+                            formatter.format(instant);
+                        } ?: "local time zone"
+                    )
                 },
-                color = Color.White,
+                color = Color.Black,
                 fontSize = 16.sp
             )
+            Spacer(Modifier.width(5.dp))
+
+            if (user?.avatar_url?.isEmpty() == true) {
+            } else {
+                Image(
+                    painter = rememberAsyncImagePainter(user?.avatar_url), // Assuming the URL of the avatar
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
         }
     }
 }
+
 
 fun getAddressFromLatLng(
     context: Context, latitude: Double, longitude: Double
@@ -475,6 +419,10 @@ fun FriendListBottomSheet(
                         text = "${loginUser.name}'s Friends",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        thickness = 1.dp, color = Color.LightGray
                     )
                     FriendListView(sharedViewModel, loginUser.friendList)
                 }
@@ -520,7 +468,7 @@ fun FriendItem(friend: FriendModel, isSelected: Boolean, onClick: () -> Unit) {
             )
             .padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
         Image(
-            painter = rememberAsyncImagePainter("https://ui-avatars.com/api/?background=random"),
+            painter = rememberAsyncImagePainter(friend.friendAvatarUrl), // Assuming the URL of the avatar
             contentDescription = "Profile Image",
             modifier = Modifier
                 .size(40.dp)

@@ -86,20 +86,72 @@ fun HomeScreen(navController: NavController, context: Context, sharedViewModel: 
 
 @Composable
 private fun Header() {
+    var expanded by remember { mutableStateOf(false) }
+    var isOptionOn by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text("Near & Dear", fontSize = 30.sp, fontFamily = FontFamily.Cursive)
-        Button(
-            onClick = {}, colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Red, contentColor = Color.White
-            ), modifier = Modifier.height(40.dp)
-        ) {
-            Text("STOP", fontSize = 14.sp)
+
+        Box {
+            IconButton(
+                onClick = { expanded = true },
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = Color(0xFFFF0000)
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Options"
+                )
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Settings", fontSize = 14.sp) },
+                    onClick = {
+                        expanded = false
+                        // Handle Option 1 click
+                    }
+                )
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth(),
+                    thickness = 1.dp, color = Color.LightGray
+                )
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("State")
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = if (isOptionOn) "Stop" else "Run",
+                                color = if (isOptionOn) Color.Green else Color.Red,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color.LightGray.copy(alpha = 0.3f))
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+                    },
+                    onClick = {
+                        isOptionOn = !isOptionOn
+                        // Optionally: expanded = false
+                    }
+                )
+            }
         }
     }
+
 }
 
 @Composable
@@ -202,7 +254,7 @@ private fun FriendsStoryRow(
                             .background(Color.LightGray)
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.profile_photo),
+                            painter = rememberAsyncImagePainter(friend.friendAvatarUrl), // Assuming the URL of the avatar
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -247,7 +299,7 @@ private fun FriendsStoryRow(
                     ) {
                         // Profile Avatar
                         AsyncImage(
-                            model = "https://ui-avatars.com/api/?background=random",
+                            model = friend.friendAvatarUrl,
                             contentDescription = "Friend Avatar",
                             modifier = Modifier
                                 .size(80.dp)
@@ -430,7 +482,7 @@ private fun FriendListHeader(navController: NavController, title: String) {
             Icon(
                 Icons.Filled.Person,
                 contentDescription = "Add",
-                modifier = Modifier.width(10.dp),
+                modifier = Modifier.width(16.dp),
                 tint = Color.White
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -457,7 +509,7 @@ private fun PendingList(friends: List<FriendModel>?) {
                     .padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
-                        painter = rememberAsyncImagePainter("https://ui-avatars.com/api/?name=" + item.name), // Assuming the URL of the avatar
+                        painter = rememberAsyncImagePainter(item.friendAvatarUrl), // Assuming the URL of the avatar
                         contentDescription = null,
                         modifier = Modifier
                             .size(40.dp)
@@ -498,7 +550,7 @@ private fun RequestList(context: Context, friends: List<FriendModel>?) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Avatar image
                     Image(
-                        painter = rememberAsyncImagePainter("https://ui-avatars.com/api/?name=" + item.name), // Assuming the URL of the avatar
+                        painter = rememberAsyncImagePainter(item.friendAvatarUrl), // Assuming the URL of the avatar
                         contentDescription = null,
                         modifier = Modifier
                             .size(40.dp)
@@ -672,7 +724,7 @@ private fun FriendList(
                     .padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
-                        painter = rememberAsyncImagePainter("https://ui-avatars.com/api/?name=" + item.name), // Assuming the URL of the avatar
+                        painter = rememberAsyncImagePainter(item.friendAvatarUrl), // Assuming the URL of the avatar
                         contentDescription = null,
                         modifier = Modifier
                             .size(40.dp)
@@ -684,10 +736,13 @@ private fun FriendList(
                         Text(item.name, fontWeight = FontWeight.Bold)
                         Text(formatUserId(item.userID), fontSize = 12.sp, color = Color.Gray)
                     }
+
+
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
+                        painter = painterResource(id = R.drawable.pin_map), // Replace with your image name
                         contentDescription = "Details",
-                        tint = Color.Gray
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(24.dp) // Optional: control the size
                     )
                 }
             }

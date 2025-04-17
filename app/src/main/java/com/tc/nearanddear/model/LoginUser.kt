@@ -71,7 +71,7 @@ data class LocationModel(
 
 @Serializable
 data class FriendModel(
-    val name: String, val userID: String, var friendState: FriendState
+    val name: String, val userID: String, var friendState: FriendState, val friendAvatarUrl: String
 )
 
 @Serializable
