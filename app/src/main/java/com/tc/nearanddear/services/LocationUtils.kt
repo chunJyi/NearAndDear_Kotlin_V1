@@ -23,8 +23,8 @@ object LocationUtils {
                     if (location != null) {
 //                        val address = getAddressFromLatLng(context, location.latitude, location.longitude)
                         val model = LocationModel(
-                            latitude = location.latitude,
-                            longitude = location.longitude,
+                            latitude = location.latitude.toString(),
+                            longitude = location.longitude.toString()
                         )
                         cont.resume(model)
                     } else {
@@ -37,18 +37,18 @@ object LocationUtils {
         }
     }
 
-    suspend fun getAddressFromLatLng(
-        context: Context,
-        latitude: Double,
-        longitude: Double
-    ): String {
-        val geocoder = Geocoder(context)
-        val addressList = geocoder.getFromLocation(latitude, longitude, 1)
-        return if (addressList != null && addressList.isNotEmpty()) {
-            val address = addressList[0]
-            "${address.getAddressLine(0)}, ${address.locality}, ${address.adminArea}, ${address.countryName}"
-        } else {
-            "Address not found"
-        }
-    }
+//    suspend fun getAddressFromLatLng(
+//        context: Context,
+//        latitude: Double,
+//        longitude: Double?
+//    ): String {
+//        val geocoder = Geocoder(context)
+//        val addressList = geocoder.getFromLocation(latitude, longitude, 1)
+//        return if (addressList != null && addressList.isNotEmpty()) {
+//            val address = addressList[0]
+//            "${address.getAddressLine(0)}, ${address.locality}, ${address.adminArea}, ${address.countryName}"
+//        } else {
+//            "Address not found"
+//        }
+//    }
 }

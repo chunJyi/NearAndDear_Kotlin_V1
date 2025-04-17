@@ -1,8 +1,8 @@
 package com.tc.nearanddear.model
 
-import androidx.navigation.Navigator
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.time.Instant
 
 @Serializable
 data class LoginUser(
@@ -16,6 +16,47 @@ data class LoginUser(
     @SerialName("updated_at") val updated_at: String,
     val friendList: List<FriendModel>? = emptyList() // fix here
 
+) {
+    companion object {
+        inline fun build(block: Builder.() -> Unit): LoginUser {
+            return Builder().apply(block).build()
+        }
+    }
+
+    class Builder {
+        var id: Long? = null
+        var created_at: String? = null
+        var name: String = ""
+        var email: String = ""
+        var avatar_url: String = ""
+        var location_model: LocationModel? = null
+        var userID: String = ""
+        var updated_at: String = ""
+        var friendList: List<FriendModel>? = emptyList()
+
+        fun build(): LoginUser {
+            return LoginUser(
+                id,
+                created_at,
+                name,
+                email,
+                avatar_url,
+                location_model,
+                userID,
+                updated_at,
+                friendList
+            )
+        }
+    }
+}
+
+@Serializable
+data class LoginUserWithoutFriendList(
+    val name: String,
+    var location_model: LocationModel?,
+    val userID: String,
+    val avatar_url: String,
+    @SerialName("updated_at") val updated_at: String, // fix here
 )
 
 @Serializable
@@ -25,14 +66,12 @@ data class LoginUserLite(
 
 @Serializable
 data class LocationModel(
-    val latitude: Double, val longitude: Double
+    val latitude: String, val longitude: String, val updatedAt: String? = Instant.now().toString()
 )
 
 @Serializable
 data class FriendModel(
-    val name: String,
-    val userID: String,
-    var friendState: FriendState
+    val name: String, val userID: String, var friendState: FriendState
 )
 
 @Serializable

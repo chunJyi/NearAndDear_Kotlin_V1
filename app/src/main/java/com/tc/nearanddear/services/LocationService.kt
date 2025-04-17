@@ -40,15 +40,15 @@ class LocationService : Service() {
             override fun onLocationResult(result: LocationResult) {
                 super.onLocationResult(result)
                 for (location in result.locations) {
-                    val lat = location.latitude
-                    val lng = location.longitude
+                    val lat = location.latitude.toString()
+                    val lng = location.longitude.toString()
                     Log.d("LocationService", "Lat: $lat, Lng: $lng")
                     UserSession.loginUser = UserSession.loginUser?.copy(
                         location_model = LocationModel(lat, lng)
                     )
                     CoroutineScope(Dispatchers.IO).launch {
-                        checkBandwidth{
-                            pushLocationToSupabase(lat,lng)
+                        checkBandwidth {
+                            pushLocationToSupabase(lat, lng)
                         }
                     }
                     updateNotification(lat, lng)
@@ -73,25 +73,26 @@ class LocationService : Service() {
         Log.d("Bandwidth", "Sent: $sent bytes, Received: $received bytes")
     }
 
-    suspend fun pushLocationToSupabase(lat: Double, lng: Double) {
+    suspend fun pushLocationToSupabase(lat: String, lng: String) {
         val userId = UserSession.loginUser?.userID ?: return // Make sure we have a valid userId
 
-        val updateData = mapOf(
-            "location_model" to mapOf(
-                "latitude" to lat,
-                "longitude" to lng
-            )
-        )
-        try {
 
-            val response = client
-                .from("loginUser")
-                .update(updateData) {
-                    filter {
-                        eq("userID", userId)
-                    }
+        val locationJson = mapOf(
+            "latitude" to lat,
+            "longitude" to lng,
+            "updatedAt" to Instant.now().toString()
+        )
+
+        val updateData = mapOf(
+            "location_model" to locationJson
+        )
+
+        try {
+            val response = client.from("loginUser").update(updateData) {
+                filter {
+                    eq("userID", userId)
                 }
-            Log.d("update data", "Sent: ${updateData.toString().toByteArray().size} bytes")
+            }
             println(response.data.utf8Size())
         } catch (e: Exception) {
             println("Error updating location: ${e.message}")
@@ -110,27 +111,25 @@ class LocationService : Service() {
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000L)
 //            .setMinUpdateDistanceMeters(10f) // Only update if moved 10 meters
             .build()
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
         ) {
             fusedLocationClient.requestLocationUpdates(
-                request,
-                locationCallback,
-                Looper.getMainLooper()
+                request, locationCallback, Looper.getMainLooper()
             )
         }
     }
 
     private fun createNotification(contentText: String): Notification {
         return NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Location Tracking Active")
-            .setContentText(contentText)
+            .setContentTitle("Location Tracking Active").setContentText(contentText)
             .setSmallIcon(com.google.android.gms.base.R.drawable.googleg_disabled_color_18) // Replace with your own icon
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+            .setPriority(NotificationCompat.PRIORITY_LOW).build()
     }
 
-    private fun updateNotification(lat: Double, lng: Double) {
+    private fun updateNotification(lat: String, lng: String) {
         val updatedNotification = createNotification("Lat: $lat, Lng: $lng")
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(notificationId, updatedNotification)
@@ -138,9 +137,7 @@ class LocationService : Service() {
 
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
-            channelId,
-            "Location Service",
-            NotificationManager.IMPORTANCE_LOW
+            channelId, "Location Service", NotificationManager.IMPORTANCE_LOW
         )
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)

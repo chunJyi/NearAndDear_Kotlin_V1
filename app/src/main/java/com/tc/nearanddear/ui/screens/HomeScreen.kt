@@ -46,10 +46,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.intellij.lang.annotations.JdkConstants
 
 @Composable
 fun HomeScreen(navController: NavController, context: Context, sharedViewModel: SharedViewModel) {
-    val user = UserSession.loginUser ?: loginUser
+    val user = loginUser ?: loginUser
     val selectedTab = remember { mutableStateOf(0) }
     val tabs = listOf("Friends", "Request", "Pending")
 
@@ -73,7 +74,7 @@ fun HomeScreen(navController: NavController, context: Context, sharedViewModel: 
             UserLocationMapCard(user)
         }
         Spacer(Modifier.height(16.dp))
-        FriendsStoryRow(user?.friendList)
+        FriendsStoryRow(user?.friendList, sharedViewModel, navController)
         Spacer(Modifier.height(16.dp))
 
         Spacer(Modifier.height(16.dp))
@@ -139,9 +140,9 @@ fun UserProfileCard(user: LoginUser?) {
 
 @Composable
 fun UserLocationMapCard(user: LoginUser?) {
-    val lat = user?.location_model?.latitude ?: 0.0
-    val lon = user?.location_model?.longitude ?: 0.0
-    val userLatLng = LatLng(lat, lon)
+    val lat = user?.location_model?.latitude ?: "0.0"
+    val lon = user?.location_model?.longitude ?: "0.0"
+    val userLatLng = LatLng(lat.toDouble(), lon.toDouble())
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(userLatLng, 15f)
@@ -167,9 +168,13 @@ fun UserLocationMapCard(user: LoginUser?) {
 }
 
 @Composable
-private fun FriendsStoryRow(friendList: List<FriendModel>?) {
+private fun FriendsStoryRow(
+    friendList: List<FriendModel>?, sharedViewModel: SharedViewModel, navController: NavController
+) {
     // Filter friends with friendState "FRIEND"
     val friends = friendList?.filter { FriendState.FRIEND.equals(it.friendState) } ?: emptyList()
+
+    var selectedFriend by remember { mutableStateOf<FriendModel?>(null) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text("Friends", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -186,6 +191,7 @@ private fun FriendsStoryRow(friendList: List<FriendModel>?) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
+                        .clickable { selectedFriend = friend }
                         .padding(end = 10.dp)
                         .widthIn(max = 60.dp) // Flexible width but constrained to a max of 80.dp
                 ) {
@@ -209,6 +215,115 @@ private fun FriendsStoryRow(friendList: List<FriendModel>?) {
                 }
             }
         }
+    }
+
+    selectedFriend?.let { friend ->
+
+        AlertDialog(
+            onDismissRequest = { selectedFriend = null },
+            confirmButton = {}, // All UI inside text block
+            text = {
+                Box(modifier = Modifier.fillMaxWidth()) {
+
+                    IconButton(
+                        onClick = { selectedFriend = null },
+                        modifier = Modifier.align(Alignment.TopEnd),
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = Color.Transparent, // black background
+                            contentColor = Color(0xFFFF0000)  // white icon
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close, contentDescription = "Close"
+                        )
+                    }
+
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Profile Avatar
+                        AsyncImage(
+                            model = "https://ui-avatars.com/api/?background=random",
+                            contentDescription = "Friend Avatar",
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(CircleShape)
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Friend Info
+                        Text(friend.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(formatUserId(friend.userID), fontSize = 14.sp, color = Color.Gray)
+
+                        Spacer(Modifier.height(20.dp))
+
+                        // Action Buttons (Message + Map)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+
+                            // Message Button
+                            Button(
+                                onClick = {
+                                    // TODO: Handle message action here
+                                    selectedFriend = null
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF000000), contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(16.dp),
+                                elevation = ButtonDefaults.elevatedButtonElevation(
+                                    defaultElevation = 4.dp
+                                ),
+                                modifier = Modifier.padding(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Email,
+                                    contentDescription = "Message",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "MAIL", fontSize = 14.sp
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    sharedViewModel.setFriend(friend.userID)
+                                    navController.navigate("map")
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.White, contentColor = Color.Black
+                                ),
+                                shape = RoundedCornerShape(16.dp),
+                                elevation = ButtonDefaults.elevatedButtonElevation(
+                                    defaultElevation = 4.dp
+                                ),
+                                border = BorderStroke(1.dp, Color.Black),
+                                modifier = Modifier.padding(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = "View",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "VIEW", fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            })
     }
 }
 
@@ -304,20 +419,30 @@ private fun FriendListHeader(navController: NavController, title: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text("$title List", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        if ("Friends" != title) {
+            return;
+        }
         Button(
             onClick = { navController.navigate("search") }, colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black, contentColor = Color.White
             ), modifier = Modifier.height(38.dp)
         ) {
-            Text("Add", fontSize = 14.sp)
+            Icon(
+                Icons.Filled.Person,
+                contentDescription = "Add",
+                modifier = Modifier.width(10.dp),
+                tint = Color.White
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "ADD", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
+            )
         }
     }
 }
 
 @Composable
 private fun PendingList(friends: List<FriendModel>?) {
-    var expandedIndex by remember { mutableIntStateOf(-1) }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -325,40 +450,27 @@ private fun PendingList(friends: List<FriendModel>?) {
             .verticalScroll(rememberScrollState())
     ) {
         friends?.forEachIndexed { index, item ->
-            val isExpanded = expandedIndex == index
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { expandedIndex = if (isExpanded) -1 else index }
+                    .clickable { }
                     .padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = when (item.friendState) {
-                            FriendState.FRIEND -> Icons.Default.Favorite
-                            FriendState.REQUEST, FriendState.PENDING -> Icons.Default.Star
-                            else -> Icons.Default.Person
-                        }, contentDescription = null, tint = when (item.friendState) {
-                            FriendState.FRIEND -> Color(0xFFF44336)
-                            FriendState.REQUEST -> Color(0xFFFFA000)
-                            FriendState.PENDING -> Color(0xFF2563EB)
-                            else -> Color.Gray
-                        }, modifier = Modifier.size(20.dp)
+                    Image(
+                        painter = rememberAsyncImagePainter("https://ui-avatars.com/api/?name=" + item.name), // Assuming the URL of the avatar
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
                     )
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(item.name, fontWeight = FontWeight.Bold)
-                        Text("ID: ${item.userID}", fontSize = 12.sp, color = Color.Gray)
+                        Text(formatUserId(item.userID), fontSize = 12.sp, color = Color.Gray)
                     }
-                    Icon(
-                        imageVector = if (isExpanded) Icons.Default.ArrowDropDown else Icons.Default.Add,
-                        contentDescription = null,
-                        tint = Color.Gray
-                    )
-                }
-                if (isExpanded) {
-                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "Extra actions or details here...", fontSize = 13.sp, color = Color.DarkGray
+                        text = "Pending ...", fontSize = 16.sp, color = Color.Blue
                     )
                 }
             }
@@ -410,8 +522,7 @@ private fun RequestList(context: Context, friends: List<FriendModel>?) {
                 if (isExpanded) {
                     Spacer(Modifier.height(8.dp))
                     Row(
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
+                        horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()
                     ) {
                         Button(
                             onClick = { removeFriend(context, item.userID) },
@@ -439,7 +550,7 @@ private fun confirmFriend(context: Context, friendUserId: String) {
 
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            val currentUserId = UserSession.loginUser?.userID ?: "";
+            val currentUserId = loginUser?.userID ?: "";
             val currentUserFriendList = fetchUserById(currentUserId)?.friendList
             val friendUserFriendList = fetchUserById(friendUserId)?.friendList
 
@@ -544,8 +655,6 @@ fun formatUserId(userId: String): String {
 private fun FriendList(
     navController: NavController, sharedViewModel: SharedViewModel, friends: List<FriendModel>?
 ) {
-    var selectedFriend by remember { mutableStateOf<FriendModel?>(null) }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -556,25 +665,24 @@ private fun FriendList(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { selectedFriend = item }
+                    .clickable {
+                        sharedViewModel.setFriend(item.userID)
+                        navController.navigate("map")
+                    }
                     .padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = when (item.friendState) {
-                            FriendState.FRIEND -> Icons.Default.Favorite
-                            FriendState.REQUEST, FriendState.PENDING -> Icons.Default.Star
-                            else -> Icons.Default.Person
-                        }, contentDescription = null, tint = when (item.friendState) {
-                            FriendState.FRIEND -> Color(0xFFF44336)
-                            FriendState.REQUEST -> Color(0xFFFFA000)
-                            FriendState.PENDING -> Color(0xFF2563EB)
-                            else -> Color.Gray
-                        }, modifier = Modifier.size(20.dp)
+                    Image(
+                        painter = rememberAsyncImagePainter("https://ui-avatars.com/api/?name=" + item.name), // Assuming the URL of the avatar
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
                     )
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(item.name, fontWeight = FontWeight.Bold)
-                        Text("ID: ${item.userID}", fontSize = 12.sp, color = Color.Gray)
+                        Text(formatUserId(item.userID), fontSize = 12.sp, color = Color.Gray)
                     }
                     Icon(
                         imageVector = Icons.Default.MoreVert,
@@ -584,87 +692,6 @@ private fun FriendList(
                 }
             }
         }
-    }
-
-    selectedFriend?.let { friend ->
-
-        AlertDialog(
-            onDismissRequest = { selectedFriend = null },
-            confirmButton = {}, // All UI inside text block
-            text = {
-                Box(modifier = Modifier.fillMaxWidth()) {
-
-                    // Top-right Close Icon
-                    IconButton(
-                        onClick = { selectedFriend = null },
-                        modifier = Modifier.align(Alignment.TopEnd)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close, contentDescription = "Close"
-                        )
-                    }
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Profile Avatar
-                        AsyncImage(
-                            model = "https://ui-avatars.com/api/?background=random",
-                            contentDescription = "Friend Avatar",
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(CircleShape)
-                        )
-
-                        Spacer(Modifier.height(12.dp))
-
-                        // Friend Info
-                        Text(friend.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("ID: ${friend.name}", fontSize = 14.sp, color = Color.Gray)
-                        Text(
-                            "Status: ${friend.friendState.name}",
-                            fontSize = 14.sp,
-                            color = Color.Gray
-                        )
-
-                        Spacer(Modifier.height(20.dp))
-
-                        // Action Buttons (Message + Map)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            // Message Icon
-                            IconButton(onClick = {
-                                // TODO: Handle message action here
-                                selectedFriend = null
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.Email,
-                                    contentDescription = "Message"
-                                )
-                            }
-
-                            // Map Icon
-                            IconButton(onClick = {
-                                // Navigate to map page with friend
-                                sharedViewModel.setFriend(friend.userID)
-                                navController.navigate("map")
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.LocationOn,
-                                    contentDescription = "Map"
-                                )
-                            }
-                        }
-                    }
-                }
-            })
     }
 }
 

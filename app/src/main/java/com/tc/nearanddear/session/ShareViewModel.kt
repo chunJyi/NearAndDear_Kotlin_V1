@@ -26,7 +26,7 @@ class SharedViewModel : ViewModel() {
         selectedFriend = null
     }
 
-    fun setUser(user: LoginUser) {
+    fun setUser(user: LoginUser?) {
         selectedUser = user;
     }
 
