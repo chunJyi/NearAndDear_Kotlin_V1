@@ -5,10 +5,12 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapShader
 import android.graphics.Canvas
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Shader
 import android.graphics.drawable.BitmapDrawable
 import android.location.Geocoder
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -256,6 +258,71 @@ suspend fun getAllDataById(userId: String): LoginUser? {
     }
 }
 
+
+//suspend fun createCustomMarkerBitmap(
+//    context: Context,
+//    imageUrl: String
+//): Bitmap {
+//    val imageSize = 100 // 🔸 Inner image (avatar) size
+//    val padding = 25    // 🔸 Padding around the avatar inside the marker
+//
+//    val imageLoader = ImageLoader(context)
+//
+//    // Load image
+//    val request = ImageRequest.Builder(context)
+//        .data(imageUrl)
+//        .allowHardware(false)
+//        .build()
+//
+//    val drawable = imageLoader.execute(request).drawable
+//        ?: return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+//
+//    val userBitmap = (drawable as BitmapDrawable).bitmap
+//    val squareCropped = centerCropSquare(userBitmap)
+//    val scaledAvatar = Bitmap.createScaledBitmap(squareCropped, imageSize, imageSize, true)
+//
+//    // Create circular avatar bitmap
+//    val circularBitmap = Bitmap.createBitmap(imageSize, imageSize, Bitmap.Config.ARGB_8888)
+//    val canvas = Canvas(circularBitmap)
+//    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+//    paint.shader = BitmapShader(scaledAvatar, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+//
+//    canvas.drawCircle(imageSize / 2f, imageSize / 2f, imageSize / 2f, paint)
+//
+//    // Load marker base pin
+//    val pinBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.user_marker)
+//        ?: return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+//
+//    // Resize pin to fit around the avatar
+//    val pinSize = imageSize + (padding * 2)
+//    val scaledPin = Bitmap.createScaledBitmap(pinBitmap, pinSize, pinSize, true)
+//
+//    // Create final output
+//    val output = Bitmap.createBitmap(pinSize, pinSize, Bitmap.Config.ARGB_8888)
+//    val finalCanvas = Canvas(output)
+//
+//    // Draw pin first
+//    finalCanvas.drawBitmap(scaledPin, 0f, 0f, null)
+//
+//    // Center the avatar circle exactly in the middle horizontally
+//    val avatarLeft = (pinSize - imageSize) / 2f
+//    val avatarTop = (pinSize - imageSize) / 2f - 10f  // 🔸 shift slightly up if needed
+//
+//    finalCanvas.drawBitmap(circularBitmap, avatarLeft, avatarTop, null)
+//
+//    return output
+//}
+//
+//// Crop to center square
+//private fun centerCropSquare(bitmap: Bitmap): Bitmap {
+//    val size = minOf(bitmap.width, bitmap.height)
+//    val x = (bitmap.width - size) / 2
+//    val y = (bitmap.height - size) / 2
+//    return Bitmap.createBitmap(bitmap, x, y, size, size)
+//}
+
+
+
 @Composable
 fun GoogleMapView(
     viewModel: SharedViewModel,
@@ -326,47 +393,62 @@ suspend fun createCustomMarkerBitmap(
     context: Context,
     imageUrl: String
 ): Bitmap {
-    val imageSize = 106  // ↓ reduced profile image size
+    val imageSize = 96  // 🔹 inner circle diameter (smaller than before)
     val imageLoader = ImageLoader(context)
 
     val request = ImageRequest.Builder(context)
         .data(imageUrl)
-        .size(imageSize, imageSize)
         .allowHardware(false)
         .build()
 
-    val drawable = imageLoader.execute(request).drawable ?: return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+    val drawable = imageLoader.execute(request).drawable
+        ?: return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+
     val userBitmap = (drawable as BitmapDrawable).bitmap
+    val croppedBitmap = centerCropSquare(userBitmap)
+    val scaledBitmap = Bitmap.createScaledBitmap(croppedBitmap, imageSize, imageSize, true)
 
-    // Load the base marker pin
-    val pinBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.user_marker)
-
-    // Scale the marker pin down (reduce original pin size to match image scale)
-    val scaledPin = Bitmap.createScaledBitmap(pinBitmap, imageSize + 80, imageSize + 80, true)
-
-    // Create a smaller output canvas
-    val outputWidth = scaledPin.width
-    val outputHeight = scaledPin.height
-    val output = Bitmap.createBitmap(outputWidth, outputHeight, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(output)
-
-    // Draw pin on canvas
-    canvas.drawBitmap(scaledPin, 0f, 0f, null)
-
-    // Draw profile photo as circle on top of the pin
+    // Draw circular avatar
+    val circularBitmap = Bitmap.createBitmap(imageSize, imageSize, Bitmap.Config.ARGB_8888)
+    val circleCanvas = Canvas(circularBitmap)
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    val shader = BitmapShader(userBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
-    paint.shader = shader
+    paint.shader = BitmapShader(scaledBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
 
     val radius = imageSize / 2f
-    val centerX = outputWidth / 2f
-    val centerY = radius + 4f  // fine-tune vertical alignment
+    circleCanvas.drawCircle(radius, radius, radius, paint)
 
-    canvas.drawCircle(centerX, centerY, radius, paint)
+    // Load and scale the pin icon
+    val pinBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.user_marker)
+        ?: return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+
+    val pinSize = imageSize + 60  // 🔹 smaller pin to match reduced image
+    val scaledPin = Bitmap.createScaledBitmap(pinBitmap, pinSize, pinSize, true)
+
+    // Final output canvas
+    val output = Bitmap.createBitmap(pinSize, pinSize, Bitmap.Config.ARGB_8888)
+    val finalCanvas = Canvas(output)
+
+    // Draw the marker pin
+    finalCanvas.drawBitmap(scaledPin, 0f, 0f, null)
+
+    // Draw circular image over the pin (centered horizontally, and shifted down a bit)
+    val imageLeft = (pinSize - imageSize) / 2f
+    val imageTop = 12f // adjust based on your pin's layout
+
+    finalCanvas.drawBitmap(circularBitmap, imageLeft, imageTop, null)
 
     return output
 }
 
+// Center crop helper
+private fun centerCropSquare(bitmap: Bitmap): Bitmap {
+    val width = bitmap.width
+    val height = bitmap.height
+    val size = minOf(width, height)
+    val xOffset = (width - size) / 2
+    val yOffset = (height - size) / 2
+    return Bitmap.createBitmap(bitmap, xOffset, yOffset, size, size)
+}
 
 
 @Composable
