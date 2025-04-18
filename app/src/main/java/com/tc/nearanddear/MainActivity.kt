@@ -84,6 +84,9 @@ class MainActivity : ComponentActivity() {
                     composable("search") {
                         SearchScreen(context, navController)
                     }
+                    composable("settings") {
+                        SettingsScreen()
+                    }
                 }
             }
         }

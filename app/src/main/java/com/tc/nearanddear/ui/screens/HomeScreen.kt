@@ -2,8 +2,6 @@ package com.tc.nearanddear.ui.screens
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
@@ -20,17 +18,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
-import coil.compose.rememberImagePainter
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
@@ -38,20 +33,17 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.tc.nearanddear.model.*
-import com.tc.nearanddear.session.UserSession
 import com.tc.nearanddear.session.UserSession.loginUser
 import com.tc.nearanddear.R
 import com.tc.nearanddear.session.SharedViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.intellij.lang.annotations.JdkConstants
 
 @Composable
 fun HomeScreen(navController: NavController, context: Context, sharedViewModel: SharedViewModel) {
     val user = loginUser ?: loginUser
-    val selectedTab = remember { mutableStateOf(0) }
+    val selectedTab = remember { mutableIntStateOf(0) }
     val tabs = listOf("Friends", "Request", "Pending")
 
     Column(
@@ -69,7 +61,7 @@ fun HomeScreen(navController: NavController, context: Context, sharedViewModel: 
                 .height(180.dp)
                 .horizontalScroll(rememberScrollState())
         ) {
-            UserProfileCard(user)
+            UserProfileCard(navController, user)
             Spacer(modifier = Modifier.width(12.dp))
             UserLocationMapCard(user)
         }
@@ -94,71 +86,22 @@ private fun Header() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text("Near & Dear", fontSize = 30.sp, fontFamily = FontFamily.Cursive)
-
-        Box {
-            IconButton(
-                onClick = { expanded = true },
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = Color.Transparent,
-                    contentColor = Color(0xFFFF0000)
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Options"
-                )
-            }
-
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Settings", fontSize = 14.sp) },
-                    onClick = {
-                        expanded = false
-                        // Handle Option 1 click
-                    }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.fillMaxWidth(),
-                    thickness = 1.dp, color = Color.LightGray
-                )
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("State")
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = if (isOptionOn) "Stop" else "Run",
-                                color = if (isOptionOn) Color.Green else Color.Red,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Color.LightGray.copy(alpha = 0.3f))
-                                    .padding(horizontal = 12.dp, vertical = 4.dp)
-                            )
-                        }
-                    },
-                    onClick = {
-                        isOptionOn = !isOptionOn
-                        // Optionally: expanded = false
-                    }
-                )
-            }
+        Button(
+            onClick = {},
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Red,
+                contentColor = Color.White
+            ), modifier = Modifier.height(40.dp)
+        ) {
+            Text("STOP", fontSize = 14.sp)
         }
     }
-
 }
 
 @Composable
-fun UserProfileCard(user: LoginUser?) {
-    // Define the gradient brush
+fun UserProfileCard(navController: NavController, user: LoginUser?) {
     val gradient = Brush.verticalGradient(
-        colors = listOf(Color(0xFF0A1934), Color(0xFF1F0812)) // Example colors (Green shades)
+        colors = listOf(Color(0xFF0A1934), Color(0xFF1F0812))
     )
 
     Card(
@@ -166,14 +109,32 @@ fun UserProfileCard(user: LoginUser?) {
             .width(310.dp)
             .fillMaxHeight(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent) // Make container transparent to show gradient
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(gradient) // Apply gradient as background
+                .background(gradient)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            IconButton(
+                onClick = { navController.navigate("settings") },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = Color.LightGray,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+            ) {
                 Text(
                     text = user?.name ?: "Unknown User",
                     fontSize = 20.sp,
@@ -221,10 +182,13 @@ fun UserLocationMapCard(user: LoginUser?) {
 
 @Composable
 private fun FriendsStoryRow(
-    friendList: List<FriendModel>?, sharedViewModel: SharedViewModel, navController: NavController
+    friendList: List<FriendModel>?,
+    sharedViewModel: SharedViewModel,
+    navController: NavController
 ) {
     // Filter friends with friendState "FRIEND"
-    val friends = friendList?.filter { FriendState.FRIEND.equals(it.friendState) } ?: emptyList()
+    val friends =
+        friendList?.filter { FriendState.FRIEND.equals(it.friendState) } ?: emptyList()
 
     var selectedFriend by remember { mutableStateOf<FriendModel?>(null) }
 
@@ -286,7 +250,8 @@ private fun FriendsStoryRow(
                         )
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Close, contentDescription = "Close"
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close"
                         )
                     }
 
@@ -309,8 +274,16 @@ private fun FriendsStoryRow(
                         Spacer(Modifier.height(12.dp))
 
                         // Friend Info
-                        Text(friend.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text(formatUserId(friend.userID), fontSize = 14.sp, color = Color.Gray)
+                        Text(
+                            friend.name,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            formatUserId(friend.userID),
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
 
                         Spacer(Modifier.height(20.dp))
 
@@ -329,7 +302,8 @@ private fun FriendsStoryRow(
                                     selectedFriend = null
                                 },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF000000), contentColor = Color.White
+                                    containerColor = Color(0xFF000000),
+                                    contentColor = Color.White
                                 ),
                                 shape = RoundedCornerShape(16.dp),
                                 elevation = ButtonDefaults.elevatedButtonElevation(
@@ -353,7 +327,8 @@ private fun FriendsStoryRow(
                                     navController.navigate("map")
                                 },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.White, contentColor = Color.Black
+                                    containerColor = Color.White,
+                                    contentColor = Color.Black
                                 ),
                                 shape = RoundedCornerShape(16.dp),
                                 elevation = ButtonDefaults.elevatedButtonElevation(
@@ -423,7 +398,11 @@ private fun FriendCard(
 }
 
 @Composable
-private fun FriendsTabs(tabs: List<String>, selectedTab: Int, onTabSelected: (Int) -> Unit) {
+private fun FriendsTabs(
+    tabs: List<String>,
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit
+) {
     TabRow(
         selectedTabIndex = selectedTab, indicator = { tabPositions ->
             TabRowDefaults.Indicator(
@@ -472,12 +451,14 @@ private fun FriendListHeader(navController: NavController, title: String) {
     ) {
         Text("$title List", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         if ("Friends" != title) {
-            return;
+            return
         }
         Button(
-            onClick = { navController.navigate("search") }, colors = ButtonDefaults.buttonColors(
+            onClick = { navController.navigate("search") },
+            colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black, contentColor = Color.White
-            ), modifier = Modifier.height(38.dp)
+            ),
+            modifier = Modifier.height(38.dp)
         ) {
             Icon(
                 Icons.Filled.Person,
@@ -487,7 +468,10 @@ private fun FriendListHeader(navController: NavController, title: String) {
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = "ADD", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                text = "ADD",
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }
@@ -519,7 +503,11 @@ private fun PendingList(friends: List<FriendModel>?) {
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(item.name, fontWeight = FontWeight.Bold)
-                        Text(formatUserId(item.userID), fontSize = 12.sp, color = Color.Gray)
+                        Text(
+                            formatUserId(item.userID),
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
                     }
                     Text(
                         text = "Pending ...", fontSize = 16.sp, color = Color.Blue
@@ -561,7 +549,11 @@ private fun RequestList(context: Context, friends: List<FriendModel>?) {
                     // Name and ID
                     Column(Modifier.weight(1f)) {
                         Text(item.name, fontWeight = FontWeight.Bold)
-                        Text(formatUserId(item.userID), fontSize = 12.sp, color = Color.Gray)
+                        Text(
+                            formatUserId(item.userID),
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
                     }
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ArrowDropDown else Icons.Default.MoreVert,
@@ -574,11 +566,16 @@ private fun RequestList(context: Context, friends: List<FriendModel>?) {
                 if (isExpanded) {
                     Spacer(Modifier.height(8.dp))
                     Row(
-                        horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Button(
                             onClick = { removeFriend(context, item.userID) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD90000))
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(
+                                    0xFFD90000
+                                )
+                            )
                         ) {
                             Text("Cancel")
                         }
@@ -586,7 +583,11 @@ private fun RequestList(context: Context, friends: List<FriendModel>?) {
 
                         Button(
                             onClick = { confirmFriend(context, item.userID) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0542F6)) // Green
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(
+                                    0xFF0542F6
+                                )
+                            ) // Green
                         ) {
                             Text("Confirm")
                         }
@@ -602,7 +603,7 @@ private fun confirmFriend(context: Context, friendUserId: String) {
 
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            val currentUserId = loginUser?.userID ?: "";
+            val currentUserId = loginUser?.userID ?: ""
             val currentUserFriendList = fetchUserById(currentUserId)?.friendList
             val friendUserFriendList = fetchUserById(friendUserId)?.friendList
 
@@ -637,7 +638,7 @@ private fun confirmFriend(context: Context, friendUserId: String) {
             updateFriendListInDB(friendUserId, updatedFriendList)
 
             showToastOnMain(context, "Friend added successfully!")
-            loginUser = fetchUserById(currentUserId);
+            loginUser = fetchUserById(currentUserId)
 
         } catch (e: Exception) {
             showToastOnMain(context, "Error adding user: ${e.message}")
@@ -649,7 +650,7 @@ private fun removeFriend(context: Context, friendUserId: String) {
 
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            val currentUserId = loginUser?.userID ?: "";
+            val currentUserId = loginUser?.userID ?: ""
             val currentUserFriendList = fetchUserById(currentUserId)?.friendList
             val friendUserFriendList = fetchUserById(friendUserId)?.friendList
 
@@ -681,7 +682,7 @@ private fun removeFriend(context: Context, friendUserId: String) {
 
             showToastOnMain(context, "Friend added successfully!")
 
-            loginUser = fetchUserById(currentUserId);
+            loginUser = fetchUserById(currentUserId)
 
         } catch (e: Exception) {
             showToastOnMain(context, "Error adding user: ${e.message}")
@@ -689,7 +690,10 @@ private fun removeFriend(context: Context, friendUserId: String) {
     }
 }
 
-private fun isIncludeFriend(friendList: List<FriendModel>, userIdToCheck: String): Boolean {
+private fun isIncludeFriend(
+    friendList: List<FriendModel>,
+    userIdToCheck: String
+): Boolean {
     return friendList.any { userIdToCheck == it.userID }
 }
 
@@ -705,7 +709,9 @@ fun formatUserId(userId: String): String {
 @SuppressLint("ContextCastToActivity")
 @Composable
 private fun FriendList(
-    navController: NavController, sharedViewModel: SharedViewModel, friends: List<FriendModel>?
+    navController: NavController,
+    sharedViewModel: SharedViewModel,
+    friends: List<FriendModel>?
 ) {
     Column(
         modifier = Modifier
@@ -734,7 +740,11 @@ private fun FriendList(
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(item.name, fontWeight = FontWeight.Bold)
-                        Text(formatUserId(item.userID), fontSize = 12.sp, color = Color.Gray)
+                        Text(
+                            formatUserId(item.userID),
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
                     }
 
 

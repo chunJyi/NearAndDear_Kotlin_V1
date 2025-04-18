@@ -1,7 +1,13 @@
 package com.tc.nearanddear.ui.screens
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.BitmapShader
 import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Shader
+import android.graphics.drawable.BitmapDrawable
 import android.location.Geocoder
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -49,7 +55,10 @@ import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import androidx.core.graphics.createBitmap
+import coil.ImageLoader
+import coil.request.ImageRequest
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.tc.nearanddear.common.CommonUtils
 import java.time.Instant
 import java.time.ZoneId
@@ -255,22 +264,18 @@ fun GoogleMapView(
     onMapClick: (LatLng) -> Unit,
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var bitmapDescriptor by remember { mutableStateOf<BitmapDescriptor?>(null) }
 
-    // Compute LatLng once
     val latLng = viewModel.selectedUser?.location_model?.let {
         LatLng(it.latitude.toDoubleOrNull() ?: 0.0, it.longitude.toDoubleOrNull() ?: 0.0)
     } ?: LatLng(0.0, 0.0)
 
-    // Custom marker icon
-    val bitmapDescriptor = remember(context) {
-        ContextCompat.getDrawable(context, R.drawable.user_marker)?.let { drawable ->
-            createBitmap(96, 96).also { bitmap ->
-                Canvas(bitmap).apply {
-                    drawable.setBounds(0, 0, width, height)
-                    drawable.draw(this)
-                }
-            }
-        }?.let { BitmapDescriptorFactory.fromBitmap(it) }
+    LaunchedEffect(viewModel.selectedUser) {
+        viewModel.selectedUser?.avatar_url?.let { imageUrl ->
+            val markerBitmap = createCustomMarkerBitmap(context, imageUrl)
+            bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(markerBitmap)
+        }
     }
 
     LaunchedEffect(zoomLevel) {
@@ -281,15 +286,13 @@ fun GoogleMapView(
         )
     }
 
-
     Box(modifier = Modifier.fillMaxSize()) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             properties = MapProperties(
                 isMyLocationEnabled = true,
-                isBuildingEnabled = true,
-                mapType = MapType.NORMAL // Configurable via parameter if needed
+                isBuildingEnabled = true
             ),
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = true,
@@ -300,13 +303,12 @@ fun GoogleMapView(
             ),
             onMapClick = onMapClick
         ) {
-            Marker(
-                state = MarkerState(position = latLng),
-                title = viewModel.selectedUser?.name ?: "Selected User",
-                icon = bitmapDescriptor
-            )
-            LaunchedEffect(Unit) {
-                MarkerState(position = latLng).showInfoWindow() // Always show the info window on start
+            if (bitmapDescriptor != null) {
+                Marker(
+                    state = MarkerState(position = latLng),
+                    icon = bitmapDescriptor,
+                    title = viewModel.selectedUser?.name ?: "Selected User"
+                )
             }
         }
 
@@ -319,6 +321,53 @@ fun GoogleMapView(
         )
     }
 }
+
+suspend fun createCustomMarkerBitmap(
+    context: Context,
+    imageUrl: String
+): Bitmap {
+    val imageSize = 106  // ↓ reduced profile image size
+    val imageLoader = ImageLoader(context)
+
+    val request = ImageRequest.Builder(context)
+        .data(imageUrl)
+        .size(imageSize, imageSize)
+        .allowHardware(false)
+        .build()
+
+    val drawable = imageLoader.execute(request).drawable ?: return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+    val userBitmap = (drawable as BitmapDrawable).bitmap
+
+    // Load the base marker pin
+    val pinBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.user_marker)
+
+    // Scale the marker pin down (reduce original pin size to match image scale)
+    val scaledPin = Bitmap.createScaledBitmap(pinBitmap, imageSize + 80, imageSize + 80, true)
+
+    // Create a smaller output canvas
+    val outputWidth = scaledPin.width
+    val outputHeight = scaledPin.height
+    val output = Bitmap.createBitmap(outputWidth, outputHeight, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(output)
+
+    // Draw pin on canvas
+    canvas.drawBitmap(scaledPin, 0f, 0f, null)
+
+    // Draw profile photo as circle on top of the pin
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    val shader = BitmapShader(userBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+    paint.shader = shader
+
+    val radius = imageSize / 2f
+    val centerX = outputWidth / 2f
+    val centerY = radius + 4f  // fine-tune vertical alignment
+
+    canvas.drawCircle(centerX, centerY, radius, paint)
+
+    return output
+}
+
+
 
 @Composable
 private fun LocationInfoCard(
