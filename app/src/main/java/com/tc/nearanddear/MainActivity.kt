@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
                         SearchScreen(context, navController)
                     }
                     composable("settings") {
-                        SettingsScreen()
+                        SettingsScreen(onBackClick = { navController.popBackStack() })
                     }
                 }
             }
